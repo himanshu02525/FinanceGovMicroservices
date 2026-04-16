@@ -1,14 +1,17 @@
-package com.financegov.service;
+package com.finance.service;
 
-import java.util.*;
-import com.financegov.dto.*;
+import java.util.List;
+
+import com.finance.dto.ResourceRequestDTO;
+import com.finance.dto.ResourceResponseDTO;
 
 public interface ResourceService {
-	ResourceResponseDTO createResource(ResourceRequestDTO dto);
 
-	List<ResourceResponseDTO> getResourcesByProgramId(Long programId);
+    ResourceResponseDTO createResource(ResourceRequestDTO dto);
 
-	List<ResourceResponseDTO> getAllocatedResources();
+    List<ResourceResponseDTO> getResourcesByProgramId(Long programId);
 
-	String deleteResource(Long resourceId);
+    List<ResourceResponseDTO> getAllocatedResources();
+
+    String deleteResource(Long resourceId);
 }

@@ -1,13 +1,16 @@
-package com.financegov.repository;
+package com.finance.repository;
+
+import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import java.util.*;
-import com.financegov.model.Resource;
-import com.financegov.enums.ResourceStatus;
+
+import com.finance.enums.ResourceStatus;
+import com.finance.model.Resource;
 
 public interface ResourceRepository extends JpaRepository<Resource, Long> {
-	
-	List<Resource> findByProgramProgramId(Long programId);
 
-	List<Resource> findByStatus(ResourceStatus status);
+    // ✅ CHANGED: microservice-safe (no JPA relationship)
+    List<Resource> findByProgramId(Long programId);
+
+    List<Resource> findByStatus(ResourceStatus status);
 }

@@ -1,5 +1,4 @@
-
-package com.financegov.controller;
+package com.finance.controller;
 
 import java.util.HashMap;
 import java.util.List;
@@ -15,44 +14,46 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.financegov.dto.BudgetAllocationRequestDTO;
-import com.financegov.dto.BudgetAllocationResponseDTO;
-import com.financegov.dto.BudgetSummaryDTO;
-import com.financegov.service.BudgetAllocationService;
+import com.finance.dto.BudgetAllocationRequestDTO;
+import com.finance.dto.BudgetAllocationResponseDTO;
+import com.finance.dto.BudgetSummaryDTO;
+import com.finance.service.BudgetAllocationService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/budget-allocations")
+@RequestMapping("/api/budget")
 @RequiredArgsConstructor
 public class BudgetAllocationController {
 
 	private final BudgetAllocationService budgetAllocationService;
 
 	@PostMapping("/createAllocation")
-	public ResponseEntity<BudgetAllocationResponseDTO> createAllocation(@Valid @RequestBody BudgetAllocationRequestDTO dto) 
-	{
+	public ResponseEntity<BudgetAllocationResponseDTO> createAllocation(
+			@Valid @RequestBody BudgetAllocationRequestDTO dto) {
+
 		return new ResponseEntity<>(budgetAllocationService.createAllocation(dto), HttpStatus.CREATED);
 	}
-     
+
 	@GetMapping("/getAllAllocation")
-	public ResponseEntity<List<BudgetAllocationResponseDTO>> getAllAllocations() 
-	{
+	public ResponseEntity<List<BudgetAllocationResponseDTO>> getAllAllocations() {
+
 		return ResponseEntity.ok(budgetAllocationService.getAllAllocations());
 	}
 
 	@GetMapping("/summary/{programId}")
-	public ResponseEntity<BudgetSummaryDTO> getBudgetSummary(@PathVariable Long programId) 
-	{
+	public ResponseEntity<BudgetSummaryDTO> getBudgetSummary(@PathVariable Long programId) {
+
 		return ResponseEntity.ok(budgetAllocationService.getBudgetSummary(programId));
 	}
 
 	@DeleteMapping("/deleteAllocation/{allocationId}")
-	public ResponseEntity<Map<String, String>> deleteAllocation(@PathVariable Long allocationId) 
-	{
+	public ResponseEntity<Map<String, String>> deleteAllocation(@PathVariable Long allocationId) {
+
 		Map<String, String> response = new HashMap<>();
 		response.put("message", budgetAllocationService.deleteAllocation(allocationId));
+
 		return ResponseEntity.ok(response);
 	}
 }

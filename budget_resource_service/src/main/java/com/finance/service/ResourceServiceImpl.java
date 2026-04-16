@@ -1,18 +1,18 @@
-package com.financegov.service;
+package com.finance.service;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import com.financegov.dto.ResourceRequestDTO;
-import com.financegov.dto.ResourceResponseDTO;
-import com.financegov.enums.ResourceStatus;
-import com.financegov.exceptions.InvalidResourceStatusException;
-import com.financegov.model.FinancialProgram; // ✅ ADDED
-import com.financegov.model.Resource;
-import com.financegov.repository.FinancialProgramRepository; // ✅ ADDED
-import com.financegov.repository.ResourceRepository;
+import com.finance.client.FinancialProgramClient;
+import com.finance.dto.FinancialProgramResponseDTO;
+import com.finance.dto.ResourceRequestDTO;
+import com.finance.dto.ResourceResponseDTO;
+import com.finance.enums.ResourceStatus;
+import com.finance.exceptions.InvalidResourceStatusException;
+import com.finance.model.Resource;
+import com.finance.repository.ResourceRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -20,70 +20,96 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ResourceServiceImpl implements ResourceService {
 
-	private final ResourceRepository resourceRepository;
+    private final ResourceRepository resourceRepository;
 
-	// ✅ ADDED – required to fetch FinancialProgram entity
-	private final FinancialProgramRepository financialProgramRepository;
+    // ✅ NEW – Feign client instead of FinancialProgramRepository
+    private final FinancialProgramClient financialProgramClient;
 
-	private ResourceStatus mapStatus(String status) {
-		try {
-			return ResourceStatus.valueOf(status.toUpperCase());
-		} catch (Exception ex) {
-			throw new InvalidResourceStatusException("Resource status must be AVAILABLE or UTILIZED");
-		}
-	}
+    private ResourceStatus mapStatus(String status) {
+        try {
+            return ResourceStatus.valueOf(status.toUpperCase());
+        } catch (Exception ex) {
+            throw new InvalidResourceStatusException(
+                    "Resource status must be AVAILABLE or UTILIZED");
+        }
+    }
 
-	@Override
-	public ResourceResponseDTO createResource(ResourceRequestDTO dto) {
+    @Override
+    public ResourceResponseDTO createResource(ResourceRequestDTO dto) {
 
-		// ✅ CHANGED – fetch FinancialProgram using programId
-		FinancialProgram program = financialProgramRepository.findById(dto.getProgramId())
-				.orElseThrow(() -> new RuntimeException("Program not found"));
+        // ✅ MICROservice-safe: Check Program EXISTS via Feign
+        FinancialProgramResponseDTO program =
+                financialProgramClient.getProgramById(dto.getProgramId());
 
-		// ✅ CHANGED – set program ENTITY instead of programId
-		Resource resource = Resource.builder().program(program).type(dto.getType()).quantity(dto.getQuantity())
-				.status(mapStatus(dto.getStatus())).build();
+        // ✅ MICROservice-safe: Check Program ACTIVE
+        if (!"ACTIVE".equalsIgnoreCase(program.getStatus())) {
+            throw new IllegalStateException(
+              "Resources can be allocated only when the program status is ACTIVE");
+        }
 
-		Resource saved = resourceRepository.save(resource);
+        Resource resource = Resource.builder()
+                .programId(dto.getProgramId())
+                .type(dto.getType())
+                .quantity(dto.getQuantity())
+                .status(mapStatus(dto.getStatus()))
+                .build();
 
-		// ✅ CHANGED – access programId through program object
-		return ResourceResponseDTO.builder().resourceId(saved.getResourceId())
-				.programId(saved.getProgram().getProgramId()).type(saved.getType()).quantity(saved.getQuantity())
-				.status(saved.getStatus().name()).build();
-	}
+        Resource saved = resourceRepository.save(resource);
 
-	@Override
-	public List<ResourceResponseDTO> getResourcesByProgramId(Long programId) {
+        return ResourceResponseDTO.builder()
+                .resourceId(saved.getResourceId())
+                .programId(saved.getProgramId())
+                .type(saved.getType())
+                .quantity(saved.getQuantity())
+                .status(saved.getStatus().name())
+                .build();
+    }
 
-		List<ResourceResponseDTO> responseList = new ArrayList<>();
+    @Override
+    public List<ResourceResponseDTO> getResourcesByProgramId(Long programId) {
 
-		// ✅ CHANGED – repository method uses relationship path
-		for (Resource resource : resourceRepository.findByProgramProgramId(programId)) {
-			responseList.add(ResourceResponseDTO.builder().resourceId(resource.getResourceId())
-					.programId(resource.getProgram().getProgramId()) // ✅ FIXED
-					.type(resource.getType()).quantity(resource.getQuantity()).status(resource.getStatus().name())
-					.build());
-		}
-		return responseList;
-	}
+        List<ResourceResponseDTO> responseList = new ArrayList<>();
 
-	@Override
-	public List<ResourceResponseDTO> getAllocatedResources() {
+        for (Resource resource :
+                resourceRepository.findByProgramId(programId)) {
 
-		List<ResourceResponseDTO> responseList = new ArrayList<>();
+            responseList.add(
+                    ResourceResponseDTO.builder()
+                            .resourceId(resource.getResourceId())
+                            .programId(resource.getProgramId())
+                            .type(resource.getType())
+                            .quantity(resource.getQuantity())
+                            .status(resource.getStatus().name())
+                            .build());
+        }
 
-		for (Resource resource : resourceRepository.findByStatus(ResourceStatus.UTILIZED)) {
-			responseList.add(ResourceResponseDTO.builder().resourceId(resource.getResourceId())
-					.programId(resource.getProgram().getProgramId()) // ✅ FIXED
-					.type(resource.getType()).quantity(resource.getQuantity()).status(resource.getStatus().name())
-					.build());
-		}
-		return responseList;
-	}
+        return responseList;
+    }
 
-	@Override
-	public String deleteResource(Long resourceId) {
-		resourceRepository.deleteById(resourceId);
-		return "Resource deleted successfully";
-	}
+    @Override
+    public List<ResourceResponseDTO> getAllocatedResources() {
+
+        List<ResourceResponseDTO> responseList = new ArrayList<>();
+
+        for (Resource resource :
+                resourceRepository.findByStatus(ResourceStatus.UTILIZED)) {
+
+            responseList.add(
+                    ResourceResponseDTO.builder()
+                            .resourceId(resource.getResourceId())
+                            .programId(resource.getProgramId())
+                            .type(resource.getType())
+                            .quantity(resource.getQuantity())
+                            .status(resource.getStatus().name())
+                            .build());
+        }
+
+        return responseList;
+    }
+
+    @Override
+    public String deleteResource(Long resourceId) {
+        resourceRepository.deleteById(resourceId);
+        return "Resource deleted successfully";
+    }
 }

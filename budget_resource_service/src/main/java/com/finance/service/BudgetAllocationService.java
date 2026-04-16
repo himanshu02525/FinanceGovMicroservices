@@ -1,17 +1,20 @@
-package com.financegov.service;
+package com.finance.service;
 
 import java.util.List;
 
-import com.financegov.dto.BudgetAllocationRequestDTO;
-import com.financegov.dto.BudgetAllocationResponseDTO;
-import com.financegov.dto.BudgetSummaryDTO;
+import com.finance.dto.BudgetAllocationRequestDTO;
+import com.finance.dto.BudgetAllocationResponseDTO;
+import com.finance.dto.BudgetSummaryDTO;
 
 public interface BudgetAllocationService {
-	BudgetAllocationResponseDTO createAllocation(BudgetAllocationRequestDTO dto);
 
-	List<BudgetAllocationResponseDTO> getAllAllocations();
+    BudgetAllocationResponseDTO createAllocation(BudgetAllocationRequestDTO dto);
 
-	BudgetSummaryDTO getBudgetSummary(Long programId);
+    List<BudgetAllocationResponseDTO> getAllAllocations();
 
-	String deleteAllocation(Long allocationId);
-}// Future we deduct Budget After  Subsidy Approval 
+    BudgetSummaryDTO getBudgetSummary(Long programId);
+
+    String deleteAllocation(Long allocationId);
+
+    // Future: We deduct budget after subsidy approval
+}

@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.finance.client.FinancialProgramClient;
-import com.finance.client.SubsidyClient;
 import com.finance.dto.BudgetAllocationRequestDTO;
 import com.finance.dto.BudgetAllocationResponseDTO;
 import com.finance.dto.BudgetSummaryDTO;
@@ -34,7 +33,6 @@ public class BudgetAllocationServiceImpl implements BudgetAllocationService {
 
 	// ✅ NEW – Feign Clients instead of repositories
 	private final FinancialProgramClient financialProgramClient;
-	private final SubsidyClient subsidyClient;
 
 	private AllocationStatus mapStatus(String status) {
 		try {
@@ -116,7 +114,7 @@ public class BudgetAllocationServiceImpl implements BudgetAllocationService {
 		BigDecimal remainingBase = baseBudget.subtract(totalAllocated);
 
 		// ✅ MICROservice-safe: used amount via Feign
-		BigDecimal totalUsed = subsidyClient.getApprovedAmount(programId);
+		BigDecimal totalUsed = financialProgramClient.getApprovedAmount(programId);
 
 		BigDecimal remainingAllocated = totalAllocated.subtract(totalUsed);
 

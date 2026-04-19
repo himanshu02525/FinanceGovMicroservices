@@ -5,15 +5,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.Map;
 
-@FeignClient(
-    name = "financial-program-subsidy-service",
-    url = "http://localhost:8083"
-)
+@FeignClient(name = "financial-program-subsidy-service")
 public interface SubsidyClient {
 
-    @GetMapping("/internal/program/summary")
-    Map<String, Object> getProgramSummary();
+	@GetMapping("/programs/summary")
+	Map<String, Object> getProgramSummary();
 
-    @GetMapping("/internal/subsidy/summary")
-    Map<String, Object> getSubsidySummary();
+	@GetMapping("/subsidies/summary")
+	Map<String, Object> getSubsidySummary();
 }

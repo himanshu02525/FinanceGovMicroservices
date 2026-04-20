@@ -20,9 +20,7 @@ import com.finance.dto.ComplianceUpdateRequest;
 import com.finance.service.ComplianceRecordService;
 
 import jakarta.validation.Valid;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @RestController
 @RequestMapping("/compliance")
 public class ComplianceController {
@@ -35,58 +33,38 @@ public class ComplianceController {
 
 	@GetMapping
 	public ResponseEntity<List<ComplianceResponse>> getAll() {
-		log.info("Request to fetch all compliance records");
-		List<ComplianceResponse> records = service.findAll();
-		log.info("Fetched {} compliance records", records.size());
-		return ResponseEntity.ok(records);
+		return ResponseEntity.ok(service.findAll());
 	}
 
 	@GetMapping("/{id}")
 	public ResponseEntity<ComplianceResponse> getById(@PathVariable long id) {
-		log.info("Request to fetch compliance record with ID: {}", id);
-		ComplianceResponse response = service.findById(id);
-		log.info("Compliance record retrieved successfully for ID: {}", id);
-		return ResponseEntity.ok(response);
+		return ResponseEntity.ok(service.findById(id));
 	}
 
 	@GetMapping("/entity/{entityId}")
 	public ResponseEntity<List<ComplianceResponse>> findByEntityId(@PathVariable long entityId) {
-		log.info("Request to fetch compliance records for Entity ID: {}", entityId);
-		List<ComplianceResponse> records = service.findByEntityId(entityId);
-		log.info("Fetched {} compliance records for Entity ID: {}", records.size(), entityId);
-		return ResponseEntity.ok(records);
+		return ResponseEntity.ok(service.findByEntityId(entityId));
 	}
 
 	@GetMapping("/summary")
 	public ResponseEntity<Map<String, Integer>> getSummary() {
-		log.info("Request to fetch compliance summary");
-		Map<String, Integer> summary = service.getSummary();
-		log.info("Compliance summary fetched successfully");
-		return ResponseEntity.ok(summary);
+		return ResponseEntity.ok(service.getSummary());
 	}
 
 	@PostMapping
 	public ResponseEntity<ComplianceResponse> create(@Valid @RequestBody ComplianceCreateRequest body) {
-		log.info("Request to create new compliance record");
-		ComplianceResponse response = service.create(body);
-		log.info("Compliance record created successfully with ID: {}", response.getComplianceId());
-		return ResponseEntity.status(HttpStatus.CREATED).body(response);
+		return ResponseEntity.status(HttpStatus.CREATED).body(service.create(body));
 	}
 
 	@PatchMapping("/{id}")
 	public ResponseEntity<ComplianceResponse> update(@PathVariable long id,
 			@Valid @RequestBody ComplianceUpdateRequest body) {
-		log.info("Request to update compliance record with ID: {}", id);
-		ComplianceResponse response = service.update(id, body);
-		log.info("Compliance record updated successfully with ID: {}", id);
-		return ResponseEntity.ok(response);
+		return ResponseEntity.ok(service.update(id, body));
 	}
 
 	@DeleteMapping("/{id}")
 	public ResponseEntity<Void> delete(@PathVariable long id) {
-		log.warn("Request to delete compliance record with ID: {}", id);
 		service.delete(id);
-		log.info("Compliance record deleted successfully with ID: {}", id);
 		return ResponseEntity.noContent().build();
 	}
 }

@@ -10,16 +10,19 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.finance.client.EntityFeignClient;
+import com.finance.client.NotificationFeignClient;
 import com.finance.client.ProgramSubsidyFeignClient;
 import com.finance.client.TaxFeignClient;
 import com.finance.dto.ComplianceCreateRequest;
 import com.finance.dto.ComplianceResponse;
 import com.finance.dto.ComplianceUpdateRequest;
 import com.finance.dto.FinancialProgramResponse;
+import com.finance.dto.NotificationRequestDto;
 import com.finance.dto.SubsidyResponse;
 import com.finance.dto.TaxResponseDTO;
 import com.finance.enums.ComplianceRecordResult;
 import com.finance.enums.ComplianceRecordType;
+import com.finance.enums.NotificationCategory;
 import com.finance.exceptions.AuditStatusConflictException;
 import com.finance.exceptions.ComplianceNotFoundException;
 import com.finance.exceptions.ComplianceStatusConflictException;
@@ -54,6 +57,7 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 	private final ProgramSubsidyFeignClient programSubsidyFeignClient;
 	private final TaxFeignClient taxFeignClient;
 	private final EntityFeignClient entityFeignClient;
+	private final NotificationFeignClient notificationFeignClient;
 
 	@Override
 	public List<ComplianceResponse> findAll() {
@@ -103,7 +107,8 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 	public ComplianceResponse findById(long complianceId) {
 
 		ComplianceRecord complianceRecord = repository.findById(complianceId)
-				.orElseThrow(() -> new ComplianceNotFoundException("Compliance not found"));
+				.orElseThrow(() -> new ComplianceNotFoundException(
+						messageUtil.getMessage(NOT_FOUND_MESSAGE, COMPLIANCE, complianceId)));
 
 		ComplianceResponse response = modelMapper.map(complianceRecord, ComplianceResponse.class);
 
@@ -148,6 +153,11 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 		}
 		validateReference(request.getType(), request.getReferenceId());
 		ComplianceRecord saved = repository.save(modelMapper.map(request, ComplianceRecord.class));
+		NotificationRequestDto notification = NotificationRequestDto.builder().userId(saved.getEntityId())
+				.entityId(request.getEntityId()).category(NotificationCategory.COMPLIANCE)
+				.message("New subsidy application submitted and pending approval.").build();
+
+		notificationFeignClient.sendNotification(notification, "complianceOfficer@gmail.com");
 		return modelMapper.map(saved, ComplianceResponse.class);
 	}
 

@@ -39,7 +39,7 @@ public class UserController {
 
 	// Looking up a specific person by their ID.
 	// Compliance officers might need this for investigations.
-	@GetMapping("/{id}")
+	@GetMapping("/getuserbyid/{id}")
 	@PreAuthorize("hasAnyRole('ADMIN', 'COMPLIANCE_OFFICER')")
 	public ResponseEntity<User> getUserById(@PathVariable Long id) {
 		log.info("Fetching details for User ID: {}", id);

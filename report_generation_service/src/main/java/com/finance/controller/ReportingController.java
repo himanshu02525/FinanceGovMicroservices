@@ -3,6 +3,9 @@ package com.finance.controller;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.finance.enums.ReportScope;
@@ -16,25 +19,32 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ReportingController {
 
+    private static final Logger log =
+            LoggerFactory.getLogger(ReportingController.class);
+
     private final ReportingService reportingService;
 
     @PostMapping("/generate/{scope}")
-    public Report generate(@PathVariable ReportScope scope) {
-        return reportingService.generateReport(scope);
+    public ResponseEntity<Report> generate(@PathVariable ReportScope scope) {
+        log.info("API call: Generate report for scope {}", scope);
+        return ResponseEntity.ok(reportingService.generateReport(scope));
     }
 
     @GetMapping("/scope/{scope}")
-    public List<Report> getByScope(@PathVariable ReportScope scope) {
-        return reportingService.getReportsByScope(scope);
+    public ResponseEntity<List<Report>> getByScope(@PathVariable ReportScope scope) {
+        log.info("API call: Get reports by scope {}", scope);
+        return ResponseEntity.ok(reportingService.getReportsByScope(scope));
     }
 
     @GetMapping("/{id}")
-    public Report getById(@PathVariable Long id) {
-        return reportingService.getReportById(id);
+    public ResponseEntity<Report> getById(@PathVariable Long id) {
+        log.info("API call: Get report by ID {}", id);
+        return ResponseEntity.ok(reportingService.getReportById(id));
     }
 
     @GetMapping("/summary")
-    public Map<ReportScope, Report> getSummary() {
-        return reportingService.getSummaryReports();
+    public ResponseEntity<Map<ReportScope, Report>> getSummary() {
+        log.info("API call: Get dashboard summary");
+        return ResponseEntity.ok(reportingService.getSummaryReports());
     }
 }

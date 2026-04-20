@@ -2,7 +2,6 @@ package com.finance.model;
 
 import java.math.BigDecimal;
 
-
 import com.finance.enums.TaxStatus;
 
 import jakarta.persistence.Column;
@@ -15,14 +14,16 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
-
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "tax_records") // Maps to the tax_records table in the microservice database [cite: 94, 104]
 @Data
-
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor
 public class TaxRecord {
 

@@ -6,16 +6,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.finance.client.CitizenClient;
-import com.finance.client.NotificationFeignClient;
-import com.finance.client.UserFeignClient;
-import com.finance.dto.NotificationRequestDto;
 import com.finance.dto.SubsidyApplicationRequest;
 import com.finance.dto.SubsidyApplicationResponse;
-import com.finance.dto.UserDto;
 import com.finance.enums.ApplicationStatus;
-import com.finance.enums.NotificationCategory;
 import com.finance.enums.ProgramStatus;
-import com.finance.enums.RoleType;
 import com.finance.exceptions.ApplicationNotFoundException;
 import com.finance.model.FinancialProgram;
 import com.finance.model.SubsidyApplication;
@@ -31,9 +25,7 @@ public class SubsidyApplicationServiceImpl implements SubsidyApplicationService 
     private final FinancialProgramRepository programRepository;
     private final SubsidyApplicationRepository applicationRepository;
     private final CitizenClient citizenClient;
-    private final NotificationFeignClient notificationFeignClient;
-    private final UserFeignClient userFeignClient;
-
+    
   
     @Override
     @Transactional
@@ -59,20 +51,7 @@ public class SubsidyApplicationServiceImpl implements SubsidyApplicationService 
 
         SubsidyApplication saved = applicationRepository.save(app);
 
-        // ✅ Notify all financial officers
-        List<UserDto> users = userFeignClient.getAllUsers();
-        users.stream()
-            .filter(user -> user.getRole() == RoleType.ROLE_FINANCIAL_OFFICER)
-            .forEach(officer -> {
-                NotificationRequestDto notification = NotificationRequestDto.builder()
-                        .userId(officer.getUserId())
-                        .entityId(saved.getEntityId())
-                        .category(NotificationCategory.SUBSIDY)
-                        .message("A new Citizen/Business has applied for a subsidy and is pending approval.")
-                        .build();
-
-                notificationFeignClient.sendNotification(notification, officer.getEmail());
-            });
+        
 
         
         return toResponse(saved);

@@ -9,11 +9,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.finance.client.CitizenClient;
-import com.finance.client.NotificationFeignClient;
-import com.finance.dto.NotificationRequestDto;
+
 import com.finance.dto.SubsidyRequest;
 import com.finance.dto.SubsidyResponse;
-import com.finance.enums.NotificationCategory;
+
 import com.finance.enums.SubsidyStatus;
 import com.finance.exceptions.SubsidyNotFoundException;
 import com.finance.model.FinancialProgram;
@@ -33,7 +32,7 @@ public class SubsidyServiceImpl implements SubsidyService {
     private final SubsidyApplicationRepository applicationRepository;
     private final FinancialProgramRepository programRepository;
     private final CitizenClient citizenClient;
-    private final NotificationFeignClient notificationFeignClient;
+    
 
     @Override
     @Transactional
@@ -61,16 +60,7 @@ public class SubsidyServiceImpl implements SubsidyService {
 
         Subsidy saved = subsidyRepository.save(subsidy);
 
-        // ✅ Trigger notification: Subsidy granted (no amount shown)
-        NotificationRequestDto notification = NotificationRequestDto.builder()
-                .userId(userId)
-                .entityId(saved.getEntityId())
-                .message("Your subsidy has been granted.")
-                .category(NotificationCategory.SUBSIDY)
-                .build();
-
-        notificationFeignClient.sendNotification(notification, email);
-
+       
         return toResponse(saved);
     }
 

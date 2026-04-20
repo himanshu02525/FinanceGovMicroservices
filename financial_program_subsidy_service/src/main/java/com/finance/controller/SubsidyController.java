@@ -2,6 +2,7 @@ package com.finance.controller;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.finance.dto.SubsidyRequest;
@@ -25,9 +27,14 @@ public class SubsidyController {
     
     private final SubsidyService service;
 
+ // Financial officer creates subsidy
     @PostMapping("/save")
-    public ResponseEntity<SubsidyResponse> createSubsidy(@RequestBody SubsidyRequest request) {
-        SubsidyResponse response = service.saveSubsidy(request);
+    public ResponseEntity<SubsidyResponse> createSubsidy(
+            @RequestBody SubsidyRequest request,
+            @RequestParam Long userId,
+            @RequestParam String email) {
+
+        SubsidyResponse response = service.saveSubsidy(request, userId, email);
         return ResponseEntity.ok(response);
     }
 
@@ -55,9 +62,10 @@ public class SubsidyController {
         SubsidyResponse response = service.getSubsidyById(id);
         return ResponseEntity.ok(response);
     }
-    
-    @GetMapping("/approved_sum/{programId}")
-    public ResponseEntity<BigDecimal> getApprovedAmount(@PathVariable Long programId) {
-        return ResponseEntity.ok(service.getApprovedAmountByProgram(programId));
+   
+    // -------- SUBSIDY METRICS --------
+    @GetMapping("/summary")
+    public ResponseEntity<Map<String, Object>> getSubsidySummary() {
+        return ResponseEntity.ok(service.getSubsidySummary());
     }
 }

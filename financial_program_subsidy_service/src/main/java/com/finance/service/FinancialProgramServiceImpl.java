@@ -1,7 +1,9 @@
 package com.finance.service;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -13,18 +15,18 @@ import com.finance.enums.ProgramStatus;
 import com.finance.exceptions.ProgramNotFoundException;
 import com.finance.model.FinancialProgram;
 import com.finance.repository.FinancialProgramRepository;
+import com.finance.repository.SubsidyRepository;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class FinancialProgramServiceImpl implements FinancialProgramService {
 
     private final FinancialProgramRepository repository;
-
-    public FinancialProgramServiceImpl(FinancialProgramRepository repository) {
-        this.repository = repository;
-    }
+    private final SubsidyRepository subsidyRepository;
 
     @Override
     @Transactional
@@ -160,4 +162,26 @@ public class FinancialProgramServiceImpl implements FinancialProgramService {
                 program.getStatus().name()
         );
     }
+    
+    
+    public long getTotalPrograms() {
+        return repository.count();
+    }
+
+    public long getActivePrograms() {
+        return repository.countByStatus(ProgramStatus.ACTIVE);
+    }
+    
+    @Override
+    public Map<String, Object> getProgramSummary() {
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("totalPrograms", repository.count());
+        summary.put("activePrograms", repository.countByStatus(ProgramStatus.ACTIVE));
+        summary.put("budgetUsed", repository.sumTotalBudgetAcrossAllPrograms()); // ✅ now uses program budgets
+        return summary;
+    }
+
+
+
+
 }

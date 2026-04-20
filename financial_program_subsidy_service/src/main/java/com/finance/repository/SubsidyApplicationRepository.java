@@ -16,5 +16,7 @@ public interface SubsidyApplicationRepository extends JpaRepository<SubsidyAppli
 	
 	
 	List<SubsidyApplication> findByEntityId(Long entityId);
+	
+	long countByProgramProgramId(Long programId);
 
 }

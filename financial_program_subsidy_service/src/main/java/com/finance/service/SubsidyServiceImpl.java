@@ -2,34 +2,43 @@ package com.finance.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.finance.client.CitizenClient;
+import com.finance.client.NotificationFeignClient;
+import com.finance.dto.NotificationRequestDto;
 import com.finance.dto.SubsidyRequest;
 import com.finance.dto.SubsidyResponse;
+import com.finance.enums.NotificationCategory;
 import com.finance.enums.SubsidyStatus;
 import com.finance.exceptions.SubsidyNotFoundException;
 import com.finance.model.FinancialProgram;
 import com.finance.model.Subsidy;
 import com.finance.repository.FinancialProgramRepository;
+import com.finance.repository.SubsidyApplicationRepository;
 import com.finance.repository.SubsidyRepository;
 
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
+
 public class SubsidyServiceImpl implements SubsidyService {
 
     private final SubsidyRepository subsidyRepository;
+    private final SubsidyApplicationRepository applicationRepository;
     private final FinancialProgramRepository programRepository;
     private final CitizenClient citizenClient;
+    private final NotificationFeignClient notificationFeignClient;
 
     @Override
     @Transactional
-    public SubsidyResponse saveSubsidy(SubsidyRequest request) {
+    public SubsidyResponse saveSubsidy(SubsidyRequest request, Long userId, String email) {
         // Validate citizen externally
         Boolean isValid = citizenClient.validateCitizen(request.getEntityId());
         if (!isValid) {
@@ -52,6 +61,17 @@ public class SubsidyServiceImpl implements SubsidyService {
         subsidy.setProgram(program);
 
         Subsidy saved = subsidyRepository.save(subsidy);
+
+        // ✅ Trigger notification: Subsidy granted (no amount shown)
+        NotificationRequestDto notification = NotificationRequestDto.builder()
+                .userId(userId)
+                .entityId(saved.getEntityId())
+                .message("Your subsidy has been granted.")
+                .category(NotificationCategory.SUBSIDY)
+                .build();
+
+        notificationFeignClient.sendNotification(notification, email);
+
         return toResponse(saved);
     }
 
@@ -80,18 +100,62 @@ public class SubsidyServiceImpl implements SubsidyService {
 
     private SubsidyResponse toResponse(Subsidy subsidy) {
         return new SubsidyResponse(
-                subsidy.getSubsidyId(),
-                subsidy.getEntityId(),
-                subsidy.getAmount(),
-                subsidy.getDate(),
-                subsidy.getStatus().name(),
-                subsidy.getProgram().getProgramId()
+            subsidy.getSubsidyId(),
+            subsidy.getEntityId(),
+            subsidy.getAmount(),
+            subsidy.getDate(),
+            subsidy.getStatus().name(),
+            subsidy.getProgram().getProgramId()
         );
+    }
+
+    
+//    @Override
+//    public BigDecimal getApprovedAmountByProgram(Long programId) {
+//        return subsidyRepository.sumApprovedAmountByProgramId(programId);
+//    }
+    
+    public long getApprovedSubsidies(Long programId) {
+        return subsidyRepository.countByProgramProgramIdAndStatus(programId, SubsidyStatus.GRANTED);
     }
     
     @Override
-    public BigDecimal getApprovedAmountByProgram(Long programId) {
-        return subsidyRepository.sumApprovedAmountByProgramId(programId);
+    public Map<String, Object> getSubsidySummary() {
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("applicationsReceived", applicationRepository.count());
+        summary.put("approvedSubsidies", subsidyRepository.countByStatus(SubsidyStatus.GRANTED));
+        summary.put("amountDistributed", subsidyRepository.sumApprovedAmountAcrossAllPrograms());
+        return summary;
     }
+    
+    
+    
 
+    @Override
+    public SubsidyResponse approveSubsidy(Long subsidyId, Long userId, String email) {
+        Subsidy subsidy = subsidyRepository.findById(subsidyId)
+                .orElseThrow(() -> new IllegalArgumentException("Subsidy not found"));
+
+        subsidy.setStatus(SubsidyStatus.GRANTED);
+        subsidyRepository.save(subsidy);
+
+        // ✅ Trigger notification
+        NotificationRequestDto notification = NotificationRequestDto.builder()
+                .userId(userId)
+                .entityId(subsidy.getEntityId())
+                .message("Your subsidy has been approved. Amount: " + subsidy.getAmount())
+                .category(NotificationCategory.SUBSIDY)
+                .build();
+
+        notificationFeignClient.sendNotification(notification, email);
+
+        return toResponse(subsidy);
+    }
 }
+
+
+	
+
+
+
+

@@ -1,6 +1,7 @@
 package com.finance.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -16,6 +17,7 @@ import com.finance.dto.FinancialProgramRequest;
 import com.finance.dto.FinancialProgramResponse;
 import com.finance.enums.ProgramStatus;
 import com.finance.service.FinancialProgramService;
+import com.finance.service.SubsidyService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +30,7 @@ public class FinancialProgramController {
 
     
     private final FinancialProgramService service;
+    private final SubsidyService subsidyService; // needed for budgetUsed
 
     @PostMapping("/save")
     public ResponseEntity<FinancialProgramResponse> createProgram(@RequestBody FinancialProgramRequest request) {
@@ -51,24 +54,6 @@ public class FinancialProgramController {
         log.info("Received request to delete program ID: {}", id);
         return service.deleteProgram(id);
     }
-
-//    @GetMapping("/fetch/{id}")
-//    public FinancialProgram getProgramById(@PathVariable Long id) {
-//        log.info("Received request to fetch program ID: {}", id);
-//        return service.getProgramById(id);
-//    }
-//
-//    @GetMapping("/fetchAll")
-//    public List<FinancialProgram> getAllPrograms() {
-//        log.info("Received request to fetch all programs");
-//        return service.getAllPrograms();
-//    }
-//
-//    @GetMapping("/fetchByStatus/{status}")
-//    public List<FinancialProgram> getProgramsByStatus(@PathVariable ProgramStatus status) {
-//        log.info("Received request to fetch programs by status: {}", status);
-//        return service.getProgramsByStatus(status);
-//    }
     
     @GetMapping("/fetch/{id}")
     public ResponseEntity<FinancialProgramResponse> getProgramById(@PathVariable Long id) {
@@ -91,5 +76,10 @@ public class FinancialProgramController {
         return ResponseEntity.ok(responses);
     }
     
-    
+ // -------- PROGRAM METRICS --------
+    @GetMapping("/summary")
+    public ResponseEntity<Map<String, Object>> getProgramSummary() {
+        return ResponseEntity.ok(service.getProgramSummary());
+    }
+
 }

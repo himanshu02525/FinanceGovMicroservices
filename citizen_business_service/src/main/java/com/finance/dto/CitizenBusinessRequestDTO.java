@@ -11,6 +11,9 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CitizenBusinessRequestDTO {
+	
+	private Long userId;
+	
 	@NotBlank(message = "Name is required")
 	@Size(max = 15, message = "Name must not exceed 15 characters")
 	private String name;

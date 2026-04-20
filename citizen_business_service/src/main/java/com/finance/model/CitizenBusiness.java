@@ -28,6 +28,9 @@ public class CitizenBusiness {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long entityId;
+    
+   
+    private Long userId;
 
     private String name;
 

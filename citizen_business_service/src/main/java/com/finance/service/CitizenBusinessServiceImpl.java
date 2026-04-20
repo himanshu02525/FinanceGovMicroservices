@@ -12,15 +12,17 @@ import com.finance.dto.CitizenBusinessResponseDTO;
 import com.finance.dto.NotificationRequestDto;
 import com.finance.dto.UserDto;
 import com.finance.enums.NotificationCategory;
-import com.finance.enums.RoleType;
 import com.finance.enums.Status;
 import com.finance.exceptions.EntityNotFoundException;
 import com.finance.model.CitizenBusiness;
 import com.finance.repository.CitizenBusinessRepository;
 
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+
+@Transactional
 @Service
 public class CitizenBusinessServiceImpl implements CitizenBusinessService {
 
@@ -33,11 +35,15 @@ public class CitizenBusinessServiceImpl implements CitizenBusinessService {
     @Autowired
     private NotificationFeignClient notificationFeignClient;
 
+    // =====================================================
+    // 1️⃣ Citizen/Business applies for a Financial Program
+    // =====================================================
     @Override
     public CitizenBusinessResponseDTO createCitizen(CitizenBusinessRequestDTO request) {
 
         log.info("Creating Citizen/Business: {}", request.getName());
 
+        // Save Citizen/Business
         CitizenBusiness citizen = new CitizenBusiness();
         citizen.setName(request.getName());
         citizen.setType(request.getType());
@@ -46,44 +52,44 @@ public class CitizenBusinessServiceImpl implements CitizenBusinessService {
         citizen.setStatus(Status.PENDING);
 
         CitizenBusiness saved = repository.save(citizen);
-
         log.info("Citizen/Business created with entityId={}", saved.getEntityId());
 
-        // 🔔 NOTIFICATION TRIGGER (Financial Officers)
-        List<UserDto> users = userFeignClient.getAllUsers();
+        // 🔔 Notification: Program Application Submitted
+        Long userId = request.getUserId();
 
-        users.stream()
-            .filter(user -> user.getRole() == RoleType.ROLE_FINANCIAL_OFFICER)
-            .forEach(officer -> {
+        UserDto user = userFeignClient.getUserById(userId);
+        log.info("Fetched user from Identity Service: {}", user.getEmail());
 
-                NotificationRequestDto notification =
-                    NotificationRequestDto.builder()
-                        .userId(officer.getUserId())
-                        .entityId(saved.getEntityId())
-                        .category(NotificationCategory.GENERAL)
-                        .message(
-                            "A new Citizen/Business has APPLIED for a financial program and is pending approval"
-                        )
-                        .build();
+        NotificationRequestDto notification =
+            NotificationRequestDto.builder()
+                .userId(user.getUserId())
+                .entityId(saved.getEntityId())
+                .category(NotificationCategory.GENERAL)
+                .message(
+                    "A new Citizen/Business has APPLIED for a financial program and is pending approval"
+                )
+                .build();
 
-                notificationFeignClient.sendNotification(
-                    notification,
-                    officer.getEmail()
-                );
+        notificationFeignClient.sendNotification(
+            notification,
+            user.getEmail()
+        );
 
-                log.info("Notification sent to Financial Officer: {}", officer.getEmail());
-            });
+        log.info("Application notification sent to {}", user.getEmail());
 
         return new CitizenBusinessResponseDTO(
-                saved.getEntityId(),
-                saved.getName(),
-                saved.getType(),
-                saved.getAddress(),
-                saved.getContactInfo(),
-                saved.getStatus()
+            saved.getEntityId(),
+            saved.getName(),
+            saved.getType(),
+            saved.getAddress(),
+            saved.getContactInfo(),
+            saved.getStatus()
         );
     }
 
+    // =====================================================
+    // Fetch APIs (unchanged)
+    // =====================================================
     @Override
     public List<CitizenBusiness> getAllCitizens() {
         log.info("Fetching all entities");
@@ -119,13 +125,40 @@ public class CitizenBusinessServiceImpl implements CitizenBusinessService {
         return updated;
     }
 
+    // =====================================================
+    // 2️⃣ Citizen/Business Application Approval
+    // =====================================================
     @Override
     public CitizenBusiness approveCitizen(Long id) {
+
         log.info("Approving entity with ID: {}", id);
+
         CitizenBusiness citizen = getCitizenById(id);
         citizen.setStatus(Status.ACTIVE);
+
         CitizenBusiness updated = repository.save(citizen);
         log.info("Entity approved (ACTIVE) with ID: {}", id);
+
+        // 🔔 Notification: Program Approved
+        Long userId = citizen.getUserId();
+
+        UserDto user = userFeignClient.getUserById(userId);
+
+        NotificationRequestDto notification =
+            NotificationRequestDto.builder()
+                .userId(user.getUserId())
+                .entityId(updated.getEntityId())
+                .category(NotificationCategory.GENERAL)
+                .message("Your financial program application has been approved")
+                .build();
+
+        notificationFeignClient.sendNotification(
+            notification,
+            user.getEmail()
+        );
+
+        log.info("Approval notification sent to {}", user.getEmail());
+
         return updated;
     }
 }

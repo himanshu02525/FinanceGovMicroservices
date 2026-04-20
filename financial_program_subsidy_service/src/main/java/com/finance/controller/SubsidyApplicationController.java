@@ -22,11 +22,9 @@ public class SubsidyApplicationController {
     // Citizen submits application
     @PostMapping("/save")
     public ResponseEntity<SubsidyApplicationResponse> createApplication(
-            @RequestBody SubsidyApplicationRequest request,
-            @RequestParam Long userId,
-            @RequestParam String email) {
+            @RequestBody SubsidyApplicationRequest request) {
 
-        SubsidyApplicationResponse response = service.saveApplication(request, userId, email);
+        SubsidyApplicationResponse response = service.saveApplication(request);
         return ResponseEntity.ok(response);
     }
 
@@ -39,23 +37,15 @@ public class SubsidyApplicationController {
 
     // Financial officer approves application
     @PutMapping("/approve/{id}")
-    public ResponseEntity<SubsidyApplicationResponse> approveApplication(
-            @PathVariable Long id,
-            @RequestParam Long userId,
-            @RequestParam String email) {
-
-        SubsidyApplicationResponse response = service.approveApplication(id, userId, email);
+    public ResponseEntity<SubsidyApplicationResponse> approveApplication(@PathVariable Long id) {
+        SubsidyApplicationResponse response = service.approveApplication(id);
         return ResponseEntity.ok(response);
     }
 
     // Financial officer rejects application
     @PutMapping("/reject/{id}")
-    public ResponseEntity<SubsidyApplicationResponse> rejectApplication(
-            @PathVariable Long id,
-            @RequestParam Long userId,
-            @RequestParam String email) {
-
-        SubsidyApplicationResponse response = service.rejectApplication(id, userId, email);
+    public ResponseEntity<SubsidyApplicationResponse> rejectApplication(@PathVariable Long id) {
+        SubsidyApplicationResponse response = service.rejectApplication(id);
         return ResponseEntity.ok(response);
     }
 

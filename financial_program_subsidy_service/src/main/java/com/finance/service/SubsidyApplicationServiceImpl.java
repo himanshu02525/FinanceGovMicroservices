@@ -7,12 +7,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.finance.client.CitizenClient;
 import com.finance.client.NotificationFeignClient;
+import com.finance.client.UserFeignClient;
 import com.finance.dto.NotificationRequestDto;
 import com.finance.dto.SubsidyApplicationRequest;
 import com.finance.dto.SubsidyApplicationResponse;
+import com.finance.dto.UserDto;
 import com.finance.enums.ApplicationStatus;
 import com.finance.enums.NotificationCategory;
 import com.finance.enums.ProgramStatus;
+import com.finance.enums.RoleType;
 import com.finance.exceptions.ApplicationNotFoundException;
 import com.finance.model.FinancialProgram;
 import com.finance.model.SubsidyApplication;
@@ -29,10 +32,12 @@ public class SubsidyApplicationServiceImpl implements SubsidyApplicationService 
     private final SubsidyApplicationRepository applicationRepository;
     private final CitizenClient citizenClient;
     private final NotificationFeignClient notificationFeignClient;
+    private final UserFeignClient userFeignClient;
 
+  
     @Override
     @Transactional
-    public SubsidyApplicationResponse saveApplication(SubsidyApplicationRequest request, Long userId, String email) {
+    public SubsidyApplicationResponse saveApplication(SubsidyApplicationRequest request) {
         // Validate citizen externally
         Boolean isValid = citizenClient.validateCitizen(request.getEntityId());
         if (!isValid) {
@@ -54,21 +59,27 @@ public class SubsidyApplicationServiceImpl implements SubsidyApplicationService 
 
         SubsidyApplication saved = applicationRepository.save(app);
 
-        // ✅ Trigger notification: Application received
-        NotificationRequestDto notification = NotificationRequestDto.builder()
-                .userId(userId)
-                .entityId(saved.getEntityId())
-                .message("Your subsidy application has been received and is pending review.")
-                .category(NotificationCategory.SUBSIDY)
-                .build();
+        // ✅ Notify all financial officers
+        List<UserDto> users = userFeignClient.getAllUsers();
+        users.stream()
+            .filter(user -> user.getRole() == RoleType.ROLE_FINANCIAL_OFFICER)
+            .forEach(officer -> {
+                NotificationRequestDto notification = NotificationRequestDto.builder()
+                        .userId(officer.getUserId())
+                        .entityId(saved.getEntityId())
+                        .category(NotificationCategory.SUBSIDY)
+                        .message("A new Citizen/Business has applied for a subsidy and is pending approval.")
+                        .build();
 
-        notificationFeignClient.sendNotification(notification, email);
+                notificationFeignClient.sendNotification(notification, officer.getEmail());
+            });
 
+        
         return toResponse(saved);
     }
 
     @Override
-    public SubsidyApplicationResponse approveApplication(Long applicationId, Long userId, String email) {
+    public SubsidyApplicationResponse approveApplication(Long applicationId) {
         SubsidyApplication app = applicationRepository.findById(applicationId)
                 .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
 
@@ -79,21 +90,12 @@ public class SubsidyApplicationServiceImpl implements SubsidyApplicationService 
         app.setStatus(ApplicationStatus.APPROVED);
         SubsidyApplication updated = applicationRepository.save(app);
 
-        // ✅ Trigger notification: Application approved
-        NotificationRequestDto notification = NotificationRequestDto.builder()
-                .userId(userId)
-                .entityId(updated.getEntityId())
-                .message("Your subsidy application has been approved.")
-                .category(NotificationCategory.SUBSIDY)
-                .build();
-
-        notificationFeignClient.sendNotification(notification, email);
-
+        
         return toResponse(updated);
     }
 
     @Override
-    public SubsidyApplicationResponse rejectApplication(Long applicationId, Long userId, String email) {
+    public SubsidyApplicationResponse rejectApplication(Long applicationId) {
         SubsidyApplication app = applicationRepository.findById(applicationId)
                 .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
 
@@ -104,16 +106,7 @@ public class SubsidyApplicationServiceImpl implements SubsidyApplicationService 
         app.setStatus(ApplicationStatus.REJECTED);
         SubsidyApplication updated = applicationRepository.save(app);
 
-        // ✅ Trigger notification: Application rejected
-        NotificationRequestDto notification = NotificationRequestDto.builder()
-                .userId(userId)
-                .entityId(updated.getEntityId())
-                .message("Your subsidy application has been rejected.")
-                .category(NotificationCategory.SUBSIDY)
-                .build();
-
-        notificationFeignClient.sendNotification(notification, email);
-
+       
         return toResponse(updated);
     }
 

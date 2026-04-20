@@ -6,15 +6,12 @@ import com.finance.dto.SubsidyApplicationRequest;
 import com.finance.dto.SubsidyApplicationResponse;
 
 public interface SubsidyApplicationService {
-//    SubsidyApplicationResponse saveApplication(SubsidyApplicationRequest request);
+    SubsidyApplicationResponse saveApplication(SubsidyApplicationRequest request);
     List<SubsidyApplicationResponse> getApplicationsByEntity(Long entityId);
-//    SubsidyApplicationResponse approveApplication(Long applicationId);
-//    SubsidyApplicationResponse rejectApplication(Long applicationId);
+    SubsidyApplicationResponse approveApplication(Long applicationId);
+    SubsidyApplicationResponse rejectApplication(Long applicationId);
     long getApplicationsReceived(Long programId);
-	SubsidyApplicationResponse approveApplication(Long applicationId, Long userId, String email);
-	SubsidyApplicationResponse rejectApplication(Long applicationId, Long userId, String email);
-	SubsidyApplicationResponse saveApplication(SubsidyApplicationRequest request, Long userId, String email);
-
+	
 }
 
 

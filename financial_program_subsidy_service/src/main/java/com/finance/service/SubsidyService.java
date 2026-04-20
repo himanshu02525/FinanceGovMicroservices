@@ -18,7 +18,7 @@ public interface SubsidyService {
     
     long getApprovedSubsidies(Long programId);
     Map<String, Object> getSubsidySummary();
-	SubsidyResponse approveSubsidy(Long subsidyId, Long userId, String email);
+//	SubsidyResponse approveSubsidy(Long subsidyId, Long userId, String email);
 	
 
 }

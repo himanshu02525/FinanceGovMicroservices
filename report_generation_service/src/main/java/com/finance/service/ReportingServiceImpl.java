@@ -92,7 +92,7 @@ public class ReportingServiceImpl implements ReportingService {
                     return new ReportNotFoundException("Report not found with ID: " + id);
                 });
     }
-
+    //
     @Override
     public Map<ReportScope, Report> getSummaryReports() {
 

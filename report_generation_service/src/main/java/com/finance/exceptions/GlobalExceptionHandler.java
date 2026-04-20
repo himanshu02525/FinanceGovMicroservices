@@ -29,6 +29,7 @@ public class GlobalExceptionHandler {
                 HttpStatus.NOT_FOUND
         );
     }
+    //
 
     // =====================================================
     // Invalid Path Variable (Enum mismatch - ReportScope)

@@ -72,6 +72,7 @@ public class GlobalExceptionHandler {
                 .body("Invalid request body or malformed JSON");
     }
 
+    //
     // =====================================================
     //  Generic / Unexpected Errors
     // =====================================================

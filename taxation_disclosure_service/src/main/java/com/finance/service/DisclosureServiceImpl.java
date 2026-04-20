@@ -67,10 +67,21 @@ public class DisclosureServiceImpl implements DisclosureService {
     @Override
     @Transactional
     public List<DisclosureResponseDTO> validateDisclosuresByEntity(Long id, DisclosureStatus s) {
-        // Updates status for all records belonging to one entity
+        // 1. Fetch records for the given entity ID
         List<Disclosure> list = disclosureRepository.findByEntityId(id);
+
+        // 2. CHECK: If the list is empty, throw the exception to trigger GlobalExceptionHandler
+        if (list.isEmpty()) {
+            throw new EntityNotFoundException("No disclosure records found for Entity ID: " + id);
+        }
+
+        // 3. Update status for all found records
         list.forEach(d -> d.setStatus(s));
-        return disclosureRepository.saveAll(list).stream().map(this::mapToResponseDTO).collect(Collectors.toList());
+
+        // 4. Save and return the mapped DTO list
+        return disclosureRepository.saveAll(list).stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
     }
 
     @Override

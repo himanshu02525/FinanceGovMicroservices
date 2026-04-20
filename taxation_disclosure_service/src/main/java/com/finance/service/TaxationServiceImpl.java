@@ -66,9 +66,21 @@ public class TaxationServiceImpl implements TaxationService {
     @Override
     @Transactional
     public List<TaxResponseDTO> verifyTaxRecordsByEntity(Long id, TaxStatus status) {
-        List<TaxRecord> records = taxRepository.findByEntityId(id); // Bulk fetch by entity ID
-        records.forEach(r -> r.setStatus(status)); // Batch update status
-        return taxRepository.saveAll(records).stream().map(this::mapToResponseDTO).collect(Collectors.toList());
+        // 1. Fetch records
+        List<TaxRecord> records = taxRepository.findByEntityId(id);
+        
+        // 2. CHECK: If list is empty, throw the exception to trigger the 404 handler
+        if (records.isEmpty()) {
+            throw new EntityNotFoundException("No tax records found for Entity ID: " + id);
+        }
+        
+        // 3. Update status
+        records.forEach(record -> record.setStatus(status));
+        
+        // 4. Save and map to DTO
+        return taxRepository.saveAll(records).stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
     }
 
     @Override

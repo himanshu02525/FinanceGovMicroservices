@@ -26,5 +26,7 @@ public class SubsidyRequest {
     private LocalDate date;
     
     private String status;
+    
+    private Long userId;
 }
 

@@ -7,8 +7,8 @@ import com.finance.dto.SubsidyRequest;
 import com.finance.dto.SubsidyResponse;
 
 public interface SubsidyService {
-//    SubsidyResponse saveSubsidy(SubsidyRequest request);
-	SubsidyResponse saveSubsidy(SubsidyRequest request, Long userId, String email);
+    SubsidyResponse saveSubsidy(SubsidyRequest request);
+//	SubsidyResponse saveSubsidy(SubsidyRequest request, Long userId, String email);
     List<SubsidyResponse> getAllSubsidies();
     List<SubsidyResponse> getSubsidiesByProgram(Long programId);
     List<SubsidyResponse> getSubsidiesByEntity(Long entityId);

@@ -6,9 +6,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.finance.client.CitizenClient;
+import com.finance.client.NotificationFeignClient;
+import com.finance.client.UserFeignClient;
+import com.finance.dto.NotificationRequestDto;
 import com.finance.dto.SubsidyApplicationRequest;
 import com.finance.dto.SubsidyApplicationResponse;
+import com.finance.dto.UserDto;
 import com.finance.enums.ApplicationStatus;
+import com.finance.enums.NotificationCategory;
 import com.finance.enums.ProgramStatus;
 import com.finance.exceptions.ApplicationNotFoundException;
 import com.finance.model.FinancialProgram;
@@ -25,6 +30,8 @@ public class SubsidyApplicationServiceImpl implements SubsidyApplicationService 
     private final FinancialProgramRepository programRepository;
     private final SubsidyApplicationRepository applicationRepository;
     private final CitizenClient citizenClient;
+    public final NotificationFeignClient notificationFeignClient;
+    public final UserFeignClient userFeignClient; 
     
   
     @Override
@@ -49,12 +56,26 @@ public class SubsidyApplicationServiceImpl implements SubsidyApplicationService 
         app.setProgram(program);
         app.setEntityId(request.getEntityId());
 
+     // After saving the application
         SubsidyApplication saved = applicationRepository.save(app);
 
-        
+        // ✅ Fetch user details
+        UserDto user = userFeignClient.getUserById(request.getUserId());
+        String email = user.getEmail();
+        Long id = user.getUserId();
 
-        
+        // ✅ Trigger notification
+        NotificationRequestDto notification = NotificationRequestDto.builder()
+                .userId(id)
+                .entityId(saved.getEntityId())
+                .category(NotificationCategory.SUBSIDY)
+                .message("Your subsidy application has been submitted successfully.")
+                .build();
+
+        notificationFeignClient.sendNotification(notification, email);
+
         return toResponse(saved);
+
     }
 
     @Override

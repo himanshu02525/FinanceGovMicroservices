@@ -29,12 +29,9 @@ public class SubsidyController {
 
  // Financial officer creates subsidy
     @PostMapping("/save")
-    public ResponseEntity<SubsidyResponse> createSubsidy(
-            @RequestBody SubsidyRequest request,
-            @RequestParam Long userId,
-            @RequestParam String email) {
+    public ResponseEntity<SubsidyResponse> createSubsidy(@RequestBody SubsidyRequest request) {
 
-        SubsidyResponse response = service.saveSubsidy(request, userId, email);
+        SubsidyResponse response = service.saveSubsidy(request);
         return ResponseEntity.ok(response);
     }
 

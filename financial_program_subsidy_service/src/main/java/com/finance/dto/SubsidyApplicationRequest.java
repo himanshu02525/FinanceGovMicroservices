@@ -17,4 +17,6 @@ public class SubsidyApplicationRequest {
 
     // Optional: defaults to LocalDate.now() when created automatically
     private LocalDate submittedDate;
+    
+    private Long userId;        
 }

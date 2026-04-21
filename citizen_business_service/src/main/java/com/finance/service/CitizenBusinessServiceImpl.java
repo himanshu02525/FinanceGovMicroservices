@@ -58,7 +58,7 @@ public class CitizenBusinessServiceImpl implements CitizenBusinessService {
 
 		NotificationRequestDto notification = NotificationRequestDto.builder().userId(user.getUserId())
 				.entityId(saved.getEntityId()).category(NotificationCategory.GENERAL)
-				.message("A new Citizen/Business has APPLIED for a financial program and is pending approval").build();
+				.message("A new Citizen/Business has registered and the status is pending").build();
 
 		notificationFeignClient.sendNotification(notification, user.getEmail());
 		log.info("Application notification sent to {}", user.getEmail());
@@ -124,7 +124,7 @@ public class CitizenBusinessServiceImpl implements CitizenBusinessService {
 
 		NotificationRequestDto notification = NotificationRequestDto.builder().userId(user.getUserId())
 				.entityId(updated.getEntityId()).category(NotificationCategory.GENERAL)
-				.message("Your financial program application has been approved").build();
+				.message(" The citizen/business has been approved").build();
 
 		notificationFeignClient.sendNotification(notification, user.getEmail());
 		log.info("Approval notification sent to {}", user.getEmail());

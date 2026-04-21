@@ -13,6 +13,6 @@ public interface CitizenClient {
 //    @GetMapping("/fetch/{id}")
 //    CitizenBusinessResponse getCitizenById(@PathVariable("id") Long id);
     
-    @GetMapping("/validate/{entityId}")
+    @GetMapping("/entities/validate/{entityId}")
     Boolean validateCitizen(@PathVariable("entityId") Long entityId);
 }

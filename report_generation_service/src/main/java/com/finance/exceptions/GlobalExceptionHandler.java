@@ -12,68 +12,53 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private static final Logger logger =
-            LoggerFactory.getLogger(GlobalExceptionHandler.class);
+	private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    // =====================================================
-    // Report Not Found Exception
-    // =====================================================
-    @ExceptionHandler(ReportNotFoundException.class)
-    public ResponseEntity<String> handleReportNotFound(
-            ReportNotFoundException ex) {
+	// =====================================================
+	// Report Not Found Exception
+	// =====================================================
+	@ExceptionHandler(ReportNotFoundException.class)
+	public ResponseEntity<String> handleReportNotFound(ReportNotFoundException ex) {
 
-        logger.error("Report not found: {}", ex.getMessage());
+		logger.error("Report not found: {}", ex.getMessage());
 
-        return new ResponseEntity<>(
-                ex.getMessage(),
-                HttpStatus.NOT_FOUND
-        );
-    }
-    //
+		return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
+	}
+	//
 
-    // =====================================================
-    // Invalid Path Variable (Enum mismatch - ReportScope)
-    // Example: /reports/generate/INVALID
-    // =====================================================
-    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<String> handleMethodArgumentMismatch(
-            MethodArgumentTypeMismatchException ex) {
+	// =====================================================
+	// Invalid Path Variable (Enum mismatch - ReportScope)
+	// Example: /reports/generate/INVALID
+	// =====================================================
+	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
+	public ResponseEntity<String> handleMethodArgumentMismatch(MethodArgumentTypeMismatchException ex) {
 
-        logger.error("Invalid path variable value: {}", ex.getValue());
+		logger.error("Invalid path variable value: {}", ex.getValue());
 
-        return new ResponseEntity<>(
-                "Invalid report scope. Allowed values: PROGRAM, SUBSIDY, TAX, COMPLIANCE",
-                HttpStatus.BAD_REQUEST
-        );
-    }
+		return new ResponseEntity<>("Invalid report scope. Allowed values: PROGRAM, SUBSIDY, TAX, COMPLIANCE",
+				HttpStatus.BAD_REQUEST);
+	}
 
-    // =====================================================
-    // Invalid JSON Input
-    // =====================================================
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<String> handleInvalidJson(
-            HttpMessageNotReadableException ex) {
+	// =====================================================
+	// Invalid JSON Input
+	// =====================================================
+	@ExceptionHandler(HttpMessageNotReadableException.class)
+	public ResponseEntity<String> handleInvalidJson(HttpMessageNotReadableException ex) {
 
-        logger.error("Invalid JSON request body", ex);
+		logger.error("Invalid JSON request body", ex);
 
-        return new ResponseEntity<>(
-                "Invalid request body or malformed JSON",
-                HttpStatus.BAD_REQUEST
-        );
-    }
+		return new ResponseEntity<>("Invalid request body or malformed JSON", HttpStatus.BAD_REQUEST);
+	}
 
-    // =====================================================
-    // Generic / Unexpected Exception
-    // =====================================================
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<String> handleGenericException(
-            Exception ex) {
+	// =====================================================
+	// Generic / Unexpected Exception
+	// =====================================================
+	@ExceptionHandler(Exception.class)
+	public ResponseEntity<String> handleGenericException(Exception ex) {
 
-        logger.error("Unexpected error occurred", ex);
+		logger.error("Unexpected error occurred", ex);
 
-        return new ResponseEntity<>(
-                "Something went wrong while processing the request",
-                HttpStatus.INTERNAL_SERVER_ERROR
-        );
-    }
+		return new ResponseEntity<>("Something went wrong while processing the request",
+				HttpStatus.INTERNAL_SERVER_ERROR);
+	}
 }

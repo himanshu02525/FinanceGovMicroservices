@@ -11,5 +11,5 @@ import com.finance.dto.NotificationRequestDto;
 public interface NotificationFeignClient {
 
 	@PostMapping("/api/notifications")
-	void sendNotification(@RequestBody NotificationRequestDto request, @RequestParam("email") String email);
+	void sendNotification(@RequestBody NotificationRequestDto request, @RequestParam String email);
 }

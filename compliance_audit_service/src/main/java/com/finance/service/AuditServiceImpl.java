@@ -85,15 +85,15 @@ public class AuditServiceImpl implements AuditService {
 	public List<AuditResponse> findByOfficerId(long auditId) {
 		log.info("Fetching audit records for Officer ID: {}", auditId);
 
-		List<Audit> audits = repository.findByOfficerId(auditId);
+		List<Audit> auditRecords = repository.findByOfficerId(auditId);
 
-		if (audits.isEmpty()) {
+		if (auditRecords.isEmpty()) {
 			throw new AuditRecordNotFoundException("No audit records found for officerId: " + auditId);
 		}
 
-		log.info("Total records found for Officer ID {}: {}", auditId, audits.size());
+		log.info("Total records found for Officer ID {}: {}", auditId, auditRecords.size());
 
-		return audits.stream().map(audit -> modelMapper.map(audit, AuditResponse.class)).toList();
+		return auditRecords.stream().map(auditRecord -> modelMapper.map(auditRecord, AuditResponse.class)).toList();
 	}
 
 	@Override
@@ -102,7 +102,8 @@ public class AuditServiceImpl implements AuditService {
 
 		ResponseEntity<UserResponseDto> response = userFeignClient.getOfficerById(auditBody.getOfficerId());
 
-		if (response == null || !response.hasBody()) {
+		if (response == null || !response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+
 			throw new UserNotFoundException(
 					messageUtil.getMessage(NOT_FOUND_MESSAGE, "Officer", auditBody.getOfficerId()));
 		}

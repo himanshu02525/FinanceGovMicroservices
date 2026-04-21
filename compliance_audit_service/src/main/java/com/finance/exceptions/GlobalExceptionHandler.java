@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,22 +14,25 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import com.finance.util.MessageUtil;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @ControllerAdvice
 @Slf4j
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+	private final MessageUtil messageUtil;
 
 	/*
-	 * ========================================================== VALIDATION
-	 * EXCEPTIONS ==========================================================
+	 * ========================= VALIDATION EXCEPTIONS =========================
 	 */
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<Object> handleValidationExceptions(MethodArgumentNotValidException ex) {
 
 		List<String> errors = ex.getBindingResult().getFieldErrors().stream()
-				.map(err -> err.getField() + " : " + err.getDefaultMessage()).collect(Collectors.toList());
+				.map(err -> err.getField() + " : " + err.getDefaultMessage()).toList();
 
 		Map<String, Object> body = new LinkedHashMap<>();
 		body.put("timestamp", LocalDateTime.now());
@@ -41,91 +43,121 @@ public class GlobalExceptionHandler {
 		return ResponseEntity.badRequest().body(body);
 	}
 
-	/*
-	 * ========================================================== JSON PARSING /
-	 * JACKSON ERRORS ==========================================================
-	 */
+	/* ========================= JSON ========================= */
 	@ExceptionHandler(InvalidFormatException.class)
-	public ResponseEntity<Object> invalidFormat(InvalidFormatException ex) {
-		return buildResponse("Invalid input format: " + ex.getOriginalMessage(), HttpStatus.BAD_REQUEST);
+	public ResponseEntity<Object> handleInvalidFormat(InvalidFormatException ex) {
+		return buildGenericResponse("Invalid input format: " + ex.getOriginalMessage(), HttpStatus.BAD_REQUEST);
 	}
 
 	@ExceptionHandler(HttpMessageNotReadableException.class)
-	public ResponseEntity<Object> jsonNotReadable(HttpMessageNotReadableException ex) {
-		return buildResponse("Malformed JSON request or invalid data type", HttpStatus.BAD_REQUEST);
+	public ResponseEntity<Object> handleJsonNotReadable(HttpMessageNotReadableException ex) {
+		return buildGenericResponse("Malformed JSON request or invalid data type", HttpStatus.BAD_REQUEST);
 	}
 
 	/*
-	 * ========================================================== AUDIT MODULE
-	 * ==========================================================
+	 * ========================= AUDIT MODULE =========================
 	 */
 	@ExceptionHandler(AuditRecordNotFoundException.class)
-	public ResponseEntity<ExceptionResponse> auditRecordNotFound(AuditRecordNotFoundException ex) {
+	public ResponseEntity<ExceptionResponse> handleAuditRecordNotFound(AuditRecordNotFoundException ex) {
 		return buildExceptionResponse(ex.getMessage(), HttpStatus.NOT_FOUND);
 	}
 
 	@ExceptionHandler(AuditStatusConflictException.class)
-	public ResponseEntity<ExceptionResponse> auditStatusConflict(AuditStatusConflictException ex) {
+	public ResponseEntity<ExceptionResponse> handleAuditStatusConflict(AuditStatusConflictException ex) {
 		return buildExceptionResponse(ex.getMessage(), HttpStatus.CONFLICT);
 	}
 
 	/*
-	 * ========================================================== COMPLIANCE MODULE
-	 * ==========================================================
+	 * ========================= COMPLIANCE MODULE =========================
 	 */
 	@ExceptionHandler(ComplianceNotFoundException.class)
-	public ResponseEntity<ExceptionResponse> complianceNotFound(ComplianceNotFoundException ex) {
+	public ResponseEntity<ExceptionResponse> handleComplianceNotFound(ComplianceNotFoundException ex) {
 		return buildExceptionResponse(ex.getMessage(), HttpStatus.NOT_FOUND);
 	}
 
 	@ExceptionHandler(ComplianceStatusConflictException.class)
-	public ResponseEntity<ExceptionResponse> complianceStatusConflict(ComplianceStatusConflictException ex) {
+	public ResponseEntity<ExceptionResponse> handleComplianceStatusConflict(ComplianceStatusConflictException ex) {
 		return buildExceptionResponse(ex.getMessage(), HttpStatus.CONFLICT);
 	}
 
 	@ExceptionHandler(ComplianceViolationException.class)
-	public ResponseEntity<ExceptionResponse> complianceViolation(ComplianceViolationException ex) {
+	public ResponseEntity<ExceptionResponse> handleComplianceViolation(ComplianceViolationException ex) {
 		return buildExceptionResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
 	}
 
 	/*
-	 * ========================================================== BUSINESS
-	 * EXCEPTIONS (Runtime)
-	 * ==========================================================
+	 * ========================= GENERIC NOT FOUND EXCEPTIONS
+	 * =========================
 	 */
-	@ExceptionHandler({ IllegalArgumentException.class, RuntimeException.class })
-	public ResponseEntity<Object> handleBusinessExceptions(RuntimeException ex) {
-		log.warn("Business error: {}", ex.getMessage());
-		return buildResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
+	@ExceptionHandler({ EntityNotFoundException.class, ProgramNotFoundException.class, SubsidyNotFoundException.class,
+			TaxRecordNotFoundException.class, UserNotFoundException.class })
+	public ResponseEntity<ExceptionResponse> handleNotFoundExceptions(RuntimeException ex) {
+		return buildExceptionResponse(ex.getMessage(), HttpStatus.NOT_FOUND);
 	}
 
 	/*
-	 * ========================================================== GLOBAL FALLBACK
-	 * EXCEPTION ==========================================================
+	 * ========================= BUSINESS / RUNTIME EXCEPTIONS
+	 * =========================
+	 */
+	@ExceptionHandler(IllegalArgumentException.class)
+	public ResponseEntity<Object> handleIllegalArgument(IllegalArgumentException ex) {
+		log.warn("Illegal argument: {}", ex.getMessage());
+		return buildGenericResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
+	}
+
+	@ExceptionHandler(RuntimeException.class)
+	public ResponseEntity<Object> handleRuntimeException(RuntimeException ex) {
+		log.warn("Runtime business exception: {}", ex.getMessage());
+		return buildGenericResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
+	}
+
+	/*
+	 * ========================= Feign Clients EXCEPTIONS =========================
+	 */
+	@ExceptionHandler(feign.FeignException.NotFound.class)
+	public ResponseEntity<ExceptionResponse> handleFeignNotFound(feign.FeignException.NotFound ex) {
+		return buildExceptionResponse(ex.getMessage(), HttpStatus.NOT_FOUND);
+	}
+
+	@ExceptionHandler(feign.FeignException.class)
+	public ResponseEntity<ExceptionResponse> handleFeignError(feign.FeignException ex) {
+
+		String messageKey;
+
+		if (ex.status() == 404) {
+			messageKey = "external.service.not.found";
+		} else {
+			messageKey = "external.service.unavailable";
+		}
+
+		String message = messageUtil.getMessage(messageKey);
+
+		return buildExceptionResponse(message, HttpStatus.BAD_GATEWAY);
+	}
+
+	/*
+	 * ========================= GLOBAL FALLBACK EXCEPTION =========================
 	 */
 	@ExceptionHandler(Exception.class)
-	public ResponseEntity<Object> handleAllUnhandled(Exception ex) {
-
+	public ResponseEntity<Object> handleUnhandledException(Exception ex) {
 		log.error("Unexpected system error", ex);
-
-		return buildResponse("Internal server error. Please contact support.", HttpStatus.INTERNAL_SERVER_ERROR);
+		return buildGenericResponse("Internal server error. Please contact support.", HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 
 	/*
-	 * ========================================================== RESPONSE BUILDERS
-	 * ==========================================================
+	 * ========================= RESPONSE BUILDERS =========================
 	 */
-	private ResponseEntity<Object> buildResponse(String message, HttpStatus status) {
+	private ResponseEntity<Object> buildGenericResponse(String message, HttpStatus status) {
 		Map<String, Object> body = new LinkedHashMap<>();
+		body.put("message", message);
 		body.put("timestamp", LocalDateTime.now());
 		body.put("status", status.value());
-		body.put("message", message);
+
 		return new ResponseEntity<>(body, status);
 	}
 
 	private ResponseEntity<ExceptionResponse> buildExceptionResponse(String message, HttpStatus status) {
-		ExceptionResponse exception = new ExceptionResponse(message, LocalDate.now(), status.value());
-		return new ResponseEntity<>(exception, status);
+		ExceptionResponse response = new ExceptionResponse(message, LocalDate.now(), status.value());
+		return new ResponseEntity<>(response, status);
 	}
-
 }

@@ -5,12 +5,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.Map;
 
-@FeignClient(
-    name = "taxation-disclosure-service",
-    url = "http://localhost:8084"
-)
+@FeignClient(name = "taxation-disclosure-service")
 public interface TaxClient {
 
-    @GetMapping("/internal/tax/summary")
-    Map<String, Object> getTaxStatistics();
+	@GetMapping("/taxation/tax/summary")
+	Map<String, Object> getTaxStatistics();
 }

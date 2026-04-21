@@ -5,6 +5,7 @@ import java.util.Map;
 
 import com.finance.enums.ReportScope;
 import com.finance.model.Report;
+import com.finance.dto.ReportAnalyticsDTO;
 
 public interface ReportingService {
 
@@ -15,4 +16,7 @@ public interface ReportingService {
     Report getReportById(Long id);
 
     Map<ReportScope, Report> getSummaryReports();
+   
+
+    ReportAnalyticsDTO getAnalytics();
 }

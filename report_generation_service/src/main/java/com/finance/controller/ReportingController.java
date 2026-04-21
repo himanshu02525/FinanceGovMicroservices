@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.finance.dto.ReportAnalyticsDTO;
 import com.finance.enums.ReportScope;
 import com.finance.model.Report;
 import com.finance.service.ReportingService;
@@ -46,5 +47,12 @@ public class ReportingController {
     public ResponseEntity<Map<ReportScope, Report>> getSummary() {
         log.info("API call: Get dashboard summary");
         return ResponseEntity.ok(reportingService.getSummaryReports());
+    }
+
+    // ✅ ANALYTICS API (FIXED)
+    @GetMapping("/analytics")
+    public ResponseEntity<ReportAnalyticsDTO> getAnalytics() {
+        log.info("API call: Get analytics data");
+        return ResponseEntity.ok(reportingService.getAnalytics());
     }
 }

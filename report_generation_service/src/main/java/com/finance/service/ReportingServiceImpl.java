@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import com.finance.client.SubsidyClient;
 import com.finance.client.TaxClient;
+import com.finance.dto.ReportAnalyticsDTO;
 import com.finance.enums.ReportScope;
 import com.finance.exceptions.ReportNotFoundException;
 import com.finance.model.Report;
@@ -107,5 +108,93 @@ public class ReportingServiceImpl implements ReportingService {
 
         log.info("Dashboard summary generated successfully");
         return summary;
+    }
+
+    @Override
+    public ReportAnalyticsDTO getAnalytics() {
+
+        // Fetch reports by scope
+        List<Report> programReports = reportRepository.findByScope(ReportScope.PROGRAM);
+        List<Report> subsidyReports = reportRepository.findByScope(ReportScope.SUBSIDY);
+        List<Report> taxReports = reportRepository.findByScope(ReportScope.TAX);
+
+        // Get latest reports (last record)
+        Report programReport = null;
+        Report subsidyReport = null;
+        Report taxReport = null;
+
+        if (!programReports.isEmpty()) {
+            programReport = programReports.get(programReports.size() - 1);
+        }
+
+        if (!subsidyReports.isEmpty()) {
+            subsidyReport = subsidyReports.get(subsidyReports.size() - 1);
+        }
+
+        if (!taxReports.isEmpty()) {
+            taxReport = taxReports.get(taxReports.size() - 1);
+        }
+
+        // ---------------- PROGRAM ANALYTICS ----------------
+        double utilizationPercent = 0;
+
+        if (programReport != null &&
+            programReport.getTotalPrograms() != null &&
+            programReport.getTotalPrograms() > 0) {
+
+            utilizationPercent =
+                (programReport.getActivePrograms() * 100.0)
+                    / programReport.getTotalPrograms();
+        }
+
+        // ---------------- SUBSIDY ANALYTICS ----------------
+        double approvalRate = 0;
+        double avgSubsidy = 0;
+
+        if (subsidyReport != null &&
+            subsidyReport.getApplicationsReceived() != null &&
+            subsidyReport.getApplicationsReceived() > 0) {
+
+            approvalRate =
+                (subsidyReport.getApprovedSubsidies() * 100.0)
+                    / subsidyReport.getApplicationsReceived();
+
+            if (subsidyReport.getApprovedSubsidies() != null &&
+                subsidyReport.getApprovedSubsidies() > 0) {
+
+                avgSubsidy =
+                    subsidyReport.getAmountDistributed()
+                        / subsidyReport.getApprovedSubsidies();
+            }
+        }
+
+        // ---------------- TAX ANALYTICS ----------------
+        double avgRevenue = 0;
+
+        if (taxReport != null &&
+            taxReport.getTotalTaxpayers() != null &&
+            taxReport.getTotalTaxpayers() > 0) {
+
+            avgRevenue =
+                taxReport.getRevenueCollected()
+                    / taxReport.getTotalTaxpayers();
+        }
+
+        // ---------------- RESPONSE ----------------
+        return new ReportAnalyticsDTO(
+            programReport != null ? programReport.getTotalPrograms() : 0,
+            programReport != null ? programReport.getActivePrograms() : 0,
+            programReport != null ? programReport.getBudgetUsed() : 0,
+            utilizationPercent,
+
+            subsidyReport != null ? subsidyReport.getApplicationsReceived() : 0,
+            subsidyReport != null ? subsidyReport.getApprovedSubsidies() : 0,
+            approvalRate,
+            avgSubsidy,
+
+            taxReport != null ? taxReport.getTotalTaxpayers() : 0,
+            taxReport != null ? taxReport.getRevenueCollected() : 0,
+            avgRevenue
+        );
     }
 }

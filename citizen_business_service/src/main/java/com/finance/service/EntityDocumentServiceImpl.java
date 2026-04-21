@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import com.finance.client.NotificationFeignClient;
 import com.finance.client.UserFeignClient;
 import com.finance.dto.EntityDocumentRequestDTO;
@@ -18,9 +19,12 @@ import com.finance.model.CitizenBusiness;
 import com.finance.model.EntityDocument;
 import com.finance.repository.CitizenBusinessRepository;
 import com.finance.repository.EntityDocumentRepository;
+
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Transactional
 @Service
 public class EntityDocumentServiceImpl implements EntityDocumentService {
 

@@ -1,5 +1,7 @@
 package com.finance.service;
 
+import java.util.List;
+
 import org.springframework.mail.MailException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,27 +19,33 @@ import lombok.RequiredArgsConstructor;
 @Transactional
 public class NotificationServiceImpl implements NotificationService {
 
-    private final NotificationRepository repository;
-    private final EmailService emailService;
+	private final NotificationRepository repository;
+	private final EmailService emailService;
 
-    @Override
-    public void send(NotificationRequestDto request, String email) {
+	@Override
+	public void send(NotificationRequestDto request, String email) {
 
-        Notification notification = new Notification();
-        notification.setUserId(request.getUserId());
-        notification.setEntityId(request.getEntityId());
-        notification.setMessage(request.getMessage());
-        notification.setCategory(request.getCategory());
+		Notification notification = new Notification();
+		notification.setUserId(request.getUserId());
+		notification.setEntityId(request.getEntityId());
+		notification.setMessage(request.getMessage());
+		notification.setCategory(request.getCategory());
 
-        repository.save(notification);
+		repository.save(notification);
 
-        try {
-            emailService.send(email, "FinanceGov Notification", request.getMessage());
-            notification.setStatus(NotificationStatus.SENT);
-        } catch (MailException ex) {
-            notification.setStatus(NotificationStatus.FAILED);
-        }
+		try {
+			emailService.send(email, "FinanceGov Notification", request.getMessage());
+			notification.setStatus(NotificationStatus.SENT);
+		} catch (MailException ex) {
+			notification.setStatus(NotificationStatus.FAILED);
+		}
 
-        repository.save(notification);
-    }
+		repository.save(notification);
+	}
+
+	@Override
+	public List<Notification> getAllNotifications() {
+		return repository.findAll();
+	}
+
 }

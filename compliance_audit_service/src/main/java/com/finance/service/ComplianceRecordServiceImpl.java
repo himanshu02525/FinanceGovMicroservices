@@ -27,6 +27,9 @@ import com.finance.exceptions.AuditStatusConflictException;
 import com.finance.exceptions.ComplianceNotFoundException;
 import com.finance.exceptions.ComplianceStatusConflictException;
 import com.finance.exceptions.EntityNotFoundException;
+import com.finance.exceptions.ProgramNotFoundException;
+import com.finance.exceptions.SubsidyNotFoundException;
+import com.finance.exceptions.TaxRecordNotFoundException;
 import com.finance.model.ComplianceRecord;
 import com.finance.repository.ComplianceRecordRepository;
 import com.finance.util.MessageUtil;
@@ -45,8 +48,14 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 	private static final String SUBSIDY = "Subsidy";
 	private static final String PROGRAM = "Program";
 	private static final String TAX = "Tax";
-	private static final String NOT_FOUND_MESSAGE = "not.found.message";
 
+	private static final String NOT_FOUND_MESSAGE = "not.found.message";
+	private static final String REF_NOT_FOUND_MESSAGE = "validation.reference.notfound";
+	private static final String UPDATE_INVALID_MESSAGE = "record.update.invalid.message";
+	private static final String UPDATE_STATUS_PENDING_INVALID = "record.status.pending.invalid";
+
+	private static final String VALIDATION_REFERENCE_NOT_FOUND = "validation.reference.notfound";
+	private static final String UNSUPPORTED_COMPLIANCE_TYPE = "Unsupported compliance type: ";
 	private final ComplianceRecordRepository repository;
 	private final ModelMapper modelMapper;
 	private final MessageUtil messageUtil;
@@ -56,19 +65,37 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 	private final NotificationFeignClient notificationFeignClient;
 
 	/*
-	 * -------------------------------------------------- FEIGN RESPONSE VALIDATION
-	 * --------------------------------------------------
+	 * ================= FEIGN RESPONSE VALIDATION =================
 	 */
 	private <T> T validateFeignResponse(ResponseEntity<T> response, String resourceName, long referenceId) {
+
 		if (response == null || !response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
 
-			throw new EntityNotFoundException(messageUtil.getMessage(NOT_FOUND_MESSAGE, resourceName, referenceId));
+			switch (resourceName) {
+
+			case "TAX":
+				throw new TaxRecordNotFoundException(
+						messageUtil.getMessage(VALIDATION_REFERENCE_NOT_FOUND, resourceName, referenceId));
+
+			case "PROGRAM":
+				throw new ProgramNotFoundException(
+						messageUtil.getMessage(VALIDATION_REFERENCE_NOT_FOUND, resourceName, referenceId));
+
+			case "SUBSIDY":
+				throw new SubsidyNotFoundException(
+						messageUtil.getMessage(VALIDATION_REFERENCE_NOT_FOUND, resourceName, referenceId));
+
+			default:
+				throw new EntityNotFoundException(
+						messageUtil.getMessage(REF_NOT_FOUND_MESSAGE, resourceName, referenceId));
+			}
 		}
+
 		return response.getBody();
 	}
 
 	/*
-	 * ---------------- FETCH EXTERNAL DETAILS ----------------
+	 * ================= FETCH EXTERNAL DETAILS =================
 	 */
 	private void fetchExternalDetails(ComplianceRecord complianceRecord, ComplianceResponse response) {
 
@@ -94,12 +121,12 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 			response.setFinancialProgramResponse(program);
 		}
 
-		default -> throw new IllegalArgumentException("Unsupported compliance type: " + type);
+		default -> throw new IllegalArgumentException(UNSUPPORTED_COMPLIANCE_TYPE + type);
 		}
 	}
 
 	/*
-	 * ---------------- VALIDATE REFERENCE BEFORE CREATE ----------------
+	 * ================= VALIDATE REFERENCE BEFORE CREATE =================
 	 */
 	private void validateReference(ComplianceRecordType type, long referenceId) {
 
@@ -113,10 +140,13 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 		case PROGRAM ->
 			validateFeignResponse(programSubsidyFeignClient.getProgramById(referenceId), PROGRAM, referenceId);
 
-		default -> throw new IllegalArgumentException("Unsupported compliance type: " + type);
+		default -> throw new IllegalArgumentException(UNSUPPORTED_COMPLIANCE_TYPE + type);
 		}
 	}
 
+	/*
+	 * ================= READ OPERATIONS =================
+	 */
 	@Override
 	public List<ComplianceResponse> findAll() {
 		return repository.findAll().stream().map(r -> modelMapper.map(r, ComplianceResponse.class)).toList();
@@ -130,14 +160,19 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 						messageUtil.getMessage(NOT_FOUND_MESSAGE, COMPLIANCE, complianceId)));
 
 		ComplianceResponse response = modelMapper.map(complianceRecord, ComplianceResponse.class);
+
 		fetchExternalDetails(complianceRecord, response);
 		return response;
 	}
 
+	/*
+	 * ================= CREATE =================
+	 */
 	@Override
 	public ComplianceResponse create(ComplianceCreateRequest request) {
 
 		if (Boolean.FALSE.equals(entityFeignClient.validateEntity(request.getEntityId()))) {
+
 			throw new EntityNotFoundException(
 					messageUtil.getMessage(NOT_FOUND_MESSAGE, "Entity", request.getEntityId()));
 		}
@@ -148,39 +183,47 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 
 		NotificationRequestDto notification = NotificationRequestDto.builder().userId(saved.getEntityId())
 				.entityId(saved.getEntityId()).category(NotificationCategory.COMPLIANCE)
-				.message("New compliance record created.").build();
+				.message(messageUtil.getMessage("create.message", COMPLIANCE, saved.getComplianceId())).build();
 
 		notificationFeignClient.sendNotification(notification, "complianceOfficer@gmail.com");
 
 		return modelMapper.map(saved, ComplianceResponse.class);
 	}
 
+	/*
+	 * ================= UPDATE =================
+	 */
 	@Override
 	public ComplianceResponse update(long complianceId, ComplianceUpdateRequest body) {
 
-		ComplianceRecord complianceRecord = repository.findById(complianceId)
-				.orElseThrow(() -> new ComplianceNotFoundException(
-						messageUtil.getMessage(NOT_FOUND_MESSAGE, COMPLIANCE, complianceId)));
+		ComplianceRecord record = repository.findById(complianceId).orElseThrow(() -> new ComplianceNotFoundException(
+				messageUtil.getMessage(NOT_FOUND_MESSAGE, COMPLIANCE, complianceId)));
 
-		if (complianceRecord.getResult() == ComplianceRecordResult.PASS
-				|| complianceRecord.getResult() == ComplianceRecordResult.FAIL) {
-			throw new ComplianceStatusConflictException("Compliance already closed");
+		if (record.getResult() == ComplianceRecordResult.PASS || record.getResult() == ComplianceRecordResult.FAIL) {
+
+			throw new ComplianceStatusConflictException(messageUtil.getMessage(UPDATE_INVALID_MESSAGE, COMPLIANCE,
+					record.getResult().name(), record.getComplianceId()));
 		}
 
 		if (body.getResult() == ComplianceRecordResult.PENDING) {
-			throw new AuditStatusConflictException("Invalid state transition");
+
+			throw new AuditStatusConflictException(messageUtil.getMessage(UPDATE_STATUS_PENDING_INVALID, COMPLIANCE,
+					ComplianceRecordResult.PENDING.name(), record.getComplianceId()));
 		}
 
-		if (body.getResult() != ComplianceRecordResult.PENDING) {
-			complianceRecord.setClosedAt(LocalDateTime.now());
+		if (body.getResult() == ComplianceRecordResult.FAIL || body.getResult() == ComplianceRecordResult.PASS) {
+			record.setClosedAt(LocalDateTime.now());
 		}
 
-		complianceRecord.setNotes(body.getNotes());
-		complianceRecord.setResult(body.getResult());
+		record.setNotes(body.getNotes());
+		record.setResult(body.getResult());
 
-		return modelMapper.map(repository.save(complianceRecord), ComplianceResponse.class);
+		return modelMapper.map(repository.save(record), ComplianceResponse.class);
 	}
 
+	/*
+	 * ================= DELETE =================
+	 */
 	@Override
 	public String delete(long complianceId) {
 
@@ -189,22 +232,28 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 		}
 
 		repository.deleteById(complianceId);
+
 		return messageUtil.getMessage("delete.message", COMPLIANCE, complianceId);
 	}
 
+	/*
+	 * ================= FIND BY ENTITY =================
+	 */
 	@Override
 	public List<ComplianceResponse> findByEntityId(long entityId) {
 
-		List<ComplianceRecord> complianceRecords = repository.findByEntityId(entityId);
+		List<ComplianceRecord> records = repository.findByEntityId(entityId);
 
-		if (complianceRecords.isEmpty()) {
-			throw new ComplianceNotFoundException("No compliance records found for Entity ID: " + entityId);
+		if (records.isEmpty()) {
+			throw new ComplianceNotFoundException(messageUtil.getMessage(NOT_FOUND_MESSAGE, COMPLIANCE, entityId));
 		}
 
-		return complianceRecords.stream()
-				.map(complianceRecord -> modelMapper.map(complianceRecord, ComplianceResponse.class)).toList();
+		return records.stream().map(r -> modelMapper.map(r, ComplianceResponse.class)).toList();
 	}
 
+	/*
+	 * ================= SUMMARY =================
+	 */
 	@Override
 	public Map<String, Integer> getSummary() {
 
@@ -212,10 +261,12 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 		int total = 0;
 
 		for (ComplianceRecordResult status : ComplianceRecordResult.values()) {
+
 			int count = repository.countByResult(status);
 			summary.put(status.name(), count);
 			total += count;
 		}
+
 		summary.put("All", total);
 		return summary;
 	}

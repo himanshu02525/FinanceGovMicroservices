@@ -67,10 +67,9 @@ public class SecurityConfig {
 						.hasAnyAuthority("ROLE_COMPLIANCE_OFFICER", "ROLE_ADMIN")
 
 						// Update Compliance (PUT / PATCH)
-						.requestMatchers(HttpMethod.PUT, "/compliance/{id}")
-						.hasAnyAuthority("ROLE_COMPLIANCE_OFFICER", "ROLE_ADMIN")
+
 						.requestMatchers(HttpMethod.PATCH, "/compliance/{id}")
-						.hasAnyAuthority("ROLE_COMPLIANCE_OFFICER", "ROLE_ADMIN")
+						.hasAnyAuthority("ROLE_COMPLIANCE_OFFICER")
 
 						// Delete Compliance (DELETE)
 						.requestMatchers(HttpMethod.DELETE, "/compliance/{id}").hasAuthority("ROLE_ADMIN")
@@ -110,22 +109,33 @@ public class SecurityConfig {
 
 						/* ================= AUDIT ================= */
 
-						.requestMatchers("/audit", "/audit/{id}", "/audit/officer/{officerId}")
-
+						// View Audits
+						.requestMatchers(HttpMethod.GET, "/audit", "/audit/{id}", "/audit/officer/{officerId}")
 						.hasAuthority("ROLE_GOVERNMENT_AUDITOR")
-
-						.requestMatchers("/reports/generate/TAX")
-
-						.hasAuthority("ROLE_GOVERNMENT_AUDITOR").requestMatchers("/reports/scope/TAX")
-
-						.hasAuthority("ROLE_GOVERNMENT_AUDITOR").requestMatchers("/reports/summary")
-
-						.hasAuthority("ROLE_GOVERNMENT_AUDITOR").requestMatchers("/reports/{id}")
+						.requestMatchers(HttpMethod.POST, "/audit")
 						.hasAuthority("ROLE_GOVERNMENT_AUDITOR")
-
-						.requestMatchers("/audit/summary")
-
+						.requestMatchers(HttpMethod.POST, "/audit/{id}")
+						.hasAuthority("ROLE_GOVERNMENT_AUDITOR")
+						.requestMatchers(HttpMethod.DELETE, "/audit/{id}")
+						.hasAuthority("ROLE_ADMIN")
+						
+						.requestMatchers(HttpMethod.GET, "/audit/summary")
 						.hasAnyAuthority("ROLE_GOVERNMENT_AUDITOR", "ROLE_PROGRAM_MANAGER", "ROLE_ADMIN")
+
+						// ================= REPORTS =================
+
+						// Generate TAX Report
+						.requestMatchers(HttpMethod.POST, "/reports/generate/TAX")
+						.hasAuthority("ROLE_GOVERNMENT_AUDITOR")
+
+						// TAX Report Scope
+						.requestMatchers(HttpMethod.GET, "/reports/scope/TAX").hasAuthority("ROLE_GOVERNMENT_AUDITOR")
+
+						// Reports Summary
+						.requestMatchers(HttpMethod.GET, "/reports/summary").hasAuthority("ROLE_GOVERNMENT_AUDITOR")
+
+						// View Report by ID
+						.requestMatchers(HttpMethod.GET, "/reports/{id}").hasAuthority("ROLE_GOVERNMENT_AUDITOR")
 
 						.requestMatchers("/reports/analytics")
 
@@ -168,9 +178,15 @@ public class SecurityConfig {
 						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("applications/fetchByEntity/{entityId}")
 
 						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/taxation/taxrecords/{taxId}")
-						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/disclosure/all")
+						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/disclosure/all_disclosures")
 
 						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/taxation/admin/all_taxrecords")
+						
+						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/subsidies/save")
+						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/subsidies/fetchAll")
+						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/subsidies/fetchByEntity/{entityId}")
+						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/subsidies/fetch/{id}")
+						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/subsidies/summary")
 
 						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/reports/analytics")
 
@@ -187,6 +203,15 @@ public class SecurityConfig {
 						.hasAuthority("ROLE_PROGRAM_MANAGER").requestMatchers("/reports/summary")
 
 						.hasAuthority("ROLE_PROGRAM_MANAGER").requestMatchers("/reports/analytics")
+						
+						.hasAuthority("ROLE_PROGRAM_MANAGER").requestMatchers("/programs/save")
+						.hasAuthority("ROLE_PROGRAM_MANAGER").requestMatchers("/programs/update/{id}")
+						.hasAuthority("ROLE_PROGRAM_MANAGER").requestMatchers("/programs/delete/{id}")
+						.hasAuthority("ROLE_PROGRAM_MANAGER").requestMatchers("/programs/fetch/{id}")
+						.hasAuthority("ROLE_PROGRAM_MANAGER").requestMatchers("/programs/fetchAll")
+						.hasAuthority("ROLE_PROGRAM_MANAGER").requestMatchers("/programs/fetchByStatus/{status}")
+						.hasAuthority("ROLE_PROGRAM_MANAGER").requestMatchers("/programs/summary")
+						.hasAuthority("ROLE_PROGRAM_MANAGER").requestMatchers("/subsidies/fetchByProgram/{programId}")
 
 						.hasAuthority("ROLE_PROGRAM_MANAGER")
 
@@ -216,7 +241,7 @@ public class SecurityConfig {
 
 						.requestMatchers("/disclosure/enter_disclosure").hasAuthority("ROLE_CITIZEN")
 
-						.requestMatchers("/disclosure/all").hasAuthority("ROLE_CITIZEN")
+						.requestMatchers("/disclosure/all_disclosures").hasAuthority("ROLE_CITIZEN")
 
 						.requestMatchers("/disclosure/{disclosureId}").hasAuthority("ROLE_CITIZEN")
 
@@ -236,7 +261,7 @@ public class SecurityConfig {
 
 						.requestMatchers("/reports/**").hasAuthority("ROLE_ADMIN").requestMatchers("/disclosure/all")
 
-						.hasAuthority("ROLE_ADMIN").requestMatchers("/taxation/admin/all-taxrecords")
+						.hasAuthority("ROLE_ADMIN").requestMatchers("/taxation/all_taxrecords")
 
 						.hasAuthority("ROLE_ADMIN").requestMatchers("/documents/getAllDocument")
 
@@ -248,7 +273,7 @@ public class SecurityConfig {
 
 						.requestMatchers("/reports/analytics").hasAuthority("ROLE_ADMIN")
 
-						.requestMatchers("/disclosure/all").hasAuthority("ROLE_ADMIN")
+						.requestMatchers("/disclosure/all_disclosures").hasAuthority("ROLE_ADMIN")
 
 						/* ================= FALLBACK ================= */
 

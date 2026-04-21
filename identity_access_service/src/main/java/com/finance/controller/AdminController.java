@@ -1,6 +1,5 @@
 package com.finance.controller;
 
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
@@ -9,14 +8,12 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-
 import org.springframework.web.bind.annotation.*;
 
 import com.finance.dto.UserCreationRequest;
-import com.finance.model.User;
+import com.finance.dto.UserResponseDto;
 import com.finance.service.UserService;
 import com.finance.service.AuditService;
 
@@ -96,7 +93,7 @@ public class AdminController {
     }
 
     // =============================
-    // DELETE ANY USER (Citizen, Officer, Auditor, PM, FO, CO)
+    // DELETE ANY USER
     // =============================
     @DeleteMapping("/user/{id}")
     public ResponseEntity<String> deleteAnyUser(
@@ -106,10 +103,10 @@ public class AdminController {
     ) {
         log.info("Admin attempting to delete USER with ID: {}", id);
 
-        User user = userService.getUserById(id);
+        UserResponseDto user = userService.getUserById(id);
 
-        // Prevent deletion of Admin accounts
-        if (user.getRole().getRoleName().name().equals("ROLE_ADMIN")) {
+        // ✅ Prevent deletion of Admin accounts
+        if ("ROLE_ADMIN".equals(user.getRole())) {
             throw new RuntimeException("Admin accounts cannot be deleted.");
         }
 

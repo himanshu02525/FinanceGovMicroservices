@@ -1,6 +1,5 @@
 package com.finance.controller;
 
-
 import java.time.LocalDateTime;
 
 import org.springframework.http.HttpStatus;
@@ -37,103 +36,127 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class AuthController {
 
-	private final AuthService authService;
-	private final UserRepository userRepository;
-	private final PasswordEncoder passwordEncoder;
-	private final JavaMailSender mailSender;
-	private final AuditService auditService;
-	private final LogoutService logoutService;
+    private final AuthService authService;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JavaMailSender mailSender;
+    private final AuditService auditService;
+    private final LogoutService logoutService;
 
-	// 1. PUBLIC REGISTRATION
-	@PostMapping("/register")
-	public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest request) {
-		log.info("New user registration attempt: {}", request.getUsername());
-		String response = authService.register(request);
-		return new ResponseEntity<>(response, HttpStatus.CREATED);
-	}
+    // =============================
+    // 1. PUBLIC REGISTRATION
+    // =============================
+    @PostMapping("/register")
+    public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest request) {
+        log.info("New user registration attempt: {}", request.getUsername());
+        String response = authService.register(request);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
 
-	// 2. USER LOGIN
-	@PostMapping("/login")
-	public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request,
-			HttpServletRequest servletRequest) {
-		log.info("Login request received for: {}", request.getEmail());
+    // =============================
+    // 2. USER LOGIN
+    // =============================
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest servletRequest
+    ) {
+        log.info("Login request received for: {}", request.getEmail());
 
-		// The AuthService handles the password check and JWT generation
-		AuthResponse response = authService.login(request);
+        AuthResponse response = authService.login(request);
 
-		// We log every successful login. In a finance app, knowing WHEN
-		// and from WHERE (IP) someone logged in is critical for security.
-		auditService.logAction(request.getEmail(), "USER_LOGIN", request.getEmail(), "User logged in successfully",
-				servletRequest);
+        auditService.logAction(
+                request.getEmail(),
+                "USER_LOGIN",
+                request.getEmail(),
+                "User logged in successfully",
+                servletRequest
+        );
 
-		return ResponseEntity.ok(response);
-	}
+        return ResponseEntity.ok(response);
+    }
 
-	// 3. FORGOT PASSWORD: OTP REQUEST
-	@PostMapping("/request-otp")
-	public ResponseEntity<String> requestOtp(@RequestParam("email") String email) {
-		// Generate a random 6-digit number
-		String otp = String.valueOf((int) (Math.random() * 900000) + 100000);
+    // =============================
+    // 3. FORGOT PASSWORD: OTP REQUEST
+    // =============================
+    @PostMapping("/request-otp")
+    public ResponseEntity<String> requestOtp(@RequestParam("email") String email) {
 
-		User user = userRepository.findByEmail(email.trim()).orElseThrow(() -> new RuntimeException("User not found"));
+        String otp = String.valueOf((int) (Math.random() * 900000) + 100000);
 
-		// Save OTP and set it to expire in 5 minutes
-		user.setOtp(otp);
-		user.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
-		userRepository.save(user);
+        User user = userRepository.findByEmail(email.trim())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-		try {
-			SimpleMailMessage message = new SimpleMailMessage();
-			message.setFrom("finance-portal@gov.com");
-			message.setTo(email);
-			message.setSubject("FinanceGov: Your Password Reset Code");
-			message.setText("Hello,\n\nYour code is: " + otp
-					+ "\n\nIt expires in 5 minutes. If you didn't ask for this, please ignore this email.");
+        user.setOtp(otp);
+        user.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
+        userRepository.save(user);
 
-			mailSender.send(message);
-			return ResponseEntity.ok("Check your email. We've sent you a reset code.");
-		} catch (Exception e) {
-			log.error("Email failed to send: {}", e.getMessage());
-			return ResponseEntity.status(500).body("We had trouble sending the email. Please try again later.");
-		}
-	}
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom("finance-portal@gov.com");
+            message.setTo(email);
+            message.setSubject("FinanceGov: Your Password Reset Code");
+            message.setText(
+                    "Hello,\n\nYour code is: " + otp +
+                    "\n\nIt expires in 5 minutes. If you didn't ask for this, please ignore this email."
+            );
 
-	// 4. VERIFY OTP AND CHANGE PASSWORD
-	@PutMapping("/verify-and-update-password")
-	public ResponseEntity<String> verifyAndUpdate(@RequestBody OtpPasswordRequest request,
-			HttpServletRequest servletRequest) {
-		User user = userRepository.findByEmail(request.getEmail())
-				.orElseThrow(() -> new RuntimeException("User not found"));
+            mailSender.send(message);
+            return ResponseEntity.ok("Check your email. We've sent you a reset code.");
 
-		// Safety Check: Is the OTP correct and still valid?
-		if (user.getOtp() == null || !user.getOtp().equals(request.getOtp())) {
-			return ResponseEntity.status(401).body("That code isn't correct.");
-		}
-		if (user.getOtpExpiry().isBefore(LocalDateTime.now())) {
-			return ResponseEntity.status(401).body("That code has expired. Please request a new one.");
-		}
+        } catch (Exception e) {
+            log.error("Email failed to send: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("We had trouble sending the email. Please try again later.");
+        }
+    }
 
-		// Encrypt the new password before saving it
-		user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+    // =============================
+    // 4. VERIFY OTP AND CHANGE PASSWORD
+    // =============================
+    @PutMapping("/verify-and-update-password")
+    public ResponseEntity<String> verifyAndUpdate(
+            @Valid @RequestBody OtpPasswordRequest request,
+            HttpServletRequest servletRequest
+    ) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-		// Clear the OTP fields so they can't be used again
-		user.setOtp(null);
-		user.setOtpExpiry(null);
-		userRepository.save(user);
+        if (user.getOtp() == null || !user.getOtp().equals(request.getOtp())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("That code isn't correct.");
+        }
 
-		// Audit this change! Password resets are high-risk actions.
-		auditService.logAction(user.getEmail(), "PASSWORD_RESET", user.getEmail(),
-				"User successfully changed their password via OTP", servletRequest);
+        if (user.getOtpExpiry().isBefore(LocalDateTime.now())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("That code has expired. Please request a new one.");
+        }
 
-		return ResponseEntity.ok("Password updated! You can now log in with your new password.");
-	}
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setOtp(null);
+        user.setOtpExpiry(null);
+        userRepository.save(user);
 
-	@PostMapping("/logout")
-	public ResponseEntity<String> logout(HttpServletRequest request, Authentication authentication) {
+        auditService.logAction(
+                user.getEmail(),
+                "PASSWORD_RESET",
+                user.getEmail(),
+                "User successfully changed their password via OTP",
+                servletRequest
+        );
 
-		logoutService.logout(request, null, authentication);
+        return ResponseEntity.ok("Password updated! You can now log in with your new password.");
+    }
 
-		return ResponseEntity.ok("Logout successful");
-	}
-
+    // =============================
+    // 5. LOGOUT
+    // =============================
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(
+            HttpServletRequest request,
+            Authentication authentication
+    ) {
+        logoutService.logout(request, null, authentication);
+        return ResponseEntity.ok("Logout successful");
+    }
 }

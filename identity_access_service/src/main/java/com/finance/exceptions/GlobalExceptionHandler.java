@@ -1,9 +1,10 @@
 package com.finance.exceptions;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
-import tools.jackson.databind.ObjectMapper;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -118,12 +119,25 @@ public class GlobalExceptionHandler implements AuthenticationEntryPoint, AccessD
     }
 
     /* ===============================
+       DUPLICATE / DB CONSTRAINT ERRORS
+       =============================== */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Object> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+
+        log.warn("Database constraint violation", ex);
+
+        return buildResponse(
+                "Duplicate value detected. Please use unique username, email, or phone number.",
+                HttpStatus.BAD_REQUEST
+        );
+    }
+
+    /* ===============================
        BUSINESS LOGIC ERRORS
        =============================== */
     @ExceptionHandler({ IllegalArgumentException.class, RuntimeException.class })
     public ResponseEntity<Object> handleBusinessExceptions(RuntimeException ex) {
 
-        // ✅ IMPORTANT: return REAL message, not generic
         log.warn("Business rule violation: {}", ex.getMessage());
 
         return buildResponse(

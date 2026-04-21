@@ -20,16 +20,14 @@ import com.finance.dto.ComplianceUpdateRequest;
 import com.finance.service.ComplianceRecordService;
 
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/compliance")
+@RequiredArgsConstructor
 public class ComplianceController {
 
 	private final ComplianceRecordService service;
-
-	public ComplianceController(ComplianceRecordService service) {
-		this.service = service;
-	}
 
 	@GetMapping
 	public ResponseEntity<List<ComplianceResponse>> getAll() {

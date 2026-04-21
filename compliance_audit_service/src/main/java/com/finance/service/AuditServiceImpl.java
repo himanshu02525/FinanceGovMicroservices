@@ -82,16 +82,16 @@ public class AuditServiceImpl implements AuditService {
 	}
 
 	@Override
-	public List<AuditResponse> findByOfficerId(long auditId) {
-		log.info("Fetching audit records for Officer ID: {}", auditId);
+	public List<AuditResponse> findByOfficerId(long officerId) {
+		log.info("Fetching audit records for Officer ID: {}", officerId);
 
-		List<Audit> auditRecords = repository.findByOfficerId(auditId);
+		List<Audit> auditRecords = repository.findByOfficerId(officerId);
 
 		if (auditRecords.isEmpty()) {
-			throw new AuditRecordNotFoundException("No audit records found for officerId: " + auditId);
+			throw new AuditRecordNotFoundException("No audit records found for officerId: " + officerId);
 		}
 
-		log.info("Total records found for Officer ID {}: {}", auditId, auditRecords.size());
+		log.info("Total records found for Officer ID {}: {}", officerId, auditRecords.size());
 
 		return auditRecords.stream().map(auditRecord -> modelMapper.map(auditRecord, AuditResponse.class)).toList();
 	}

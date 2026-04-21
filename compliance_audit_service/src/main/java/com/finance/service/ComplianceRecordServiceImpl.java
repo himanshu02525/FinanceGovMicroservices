@@ -64,9 +64,7 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 	private final EntityFeignClient entityFeignClient;
 	private final NotificationFeignClient notificationFeignClient;
 
-	/*
-	 * ================= FEIGN RESPONSE VALIDATION =================
-	 */
+	/* ================= FEIGN RESPONSE VALIDATION ================= */
 	private <T> T validateFeignResponse(ResponseEntity<T> response, String resourceName, long referenceId) {
 
 		if (response == null || !response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
@@ -94,9 +92,7 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 		return response.getBody();
 	}
 
-	/*
-	 * ================= FETCH EXTERNAL DETAILS =================
-	 */
+	/* ================= FETCH EXTERNAL DETAILS ================= */
 	private void fetchExternalDetails(ComplianceRecord complianceRecord, ComplianceResponse response) {
 
 		Long refId = complianceRecord.getReferenceID();
@@ -125,9 +121,7 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 		}
 	}
 
-	/*
-	 * ================= VALIDATE REFERENCE BEFORE CREATE =================
-	 */
+	/* ================= VALIDATE REFERENCE BEFORE CREATE ================= */
 	private void validateReference(ComplianceRecordType type, long referenceId) {
 
 		switch (type) {
@@ -144,9 +138,7 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 		}
 	}
 
-	/*
-	 * ================= READ OPERATIONS =================
-	 */
+	/* ================= READ OPERATIONS ================= */
 	@Override
 	public List<ComplianceResponse> findAll() {
 		return repository.findAll().stream().map(r -> modelMapper.map(r, ComplianceResponse.class)).toList();

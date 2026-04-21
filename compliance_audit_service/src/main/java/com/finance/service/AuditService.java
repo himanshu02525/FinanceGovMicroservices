@@ -23,5 +23,5 @@ public interface AuditService {
 
 	String delete(long auditId);
 
-	List<AuditResponse> findByOfficerId(long auditId);
+	List<AuditResponse> findByOfficerId(long officerId);
 }

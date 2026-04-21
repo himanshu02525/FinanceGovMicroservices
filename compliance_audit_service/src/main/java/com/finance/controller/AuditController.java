@@ -20,16 +20,14 @@ import com.finance.dto.AuditUpdateRequest;
 import com.finance.service.AuditService;
 
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/audit")
 public class AuditController {
 
 	private final AuditService service;
-
-	public AuditController(AuditService service) {
-		this.service = service;
-	}
 
 	@GetMapping
 	public ResponseEntity<List<AuditResponse>> getAll() {

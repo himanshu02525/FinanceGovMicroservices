@@ -34,7 +34,7 @@ public class TaxationController {
         return ResponseEntity.ok(taxationService.getAllTaxRecords());
     }
 
-    @GetMapping("/admin/taxStatistics")
+    @GetMapping("/tax/summary")
     public ResponseEntity<TaxStatsDTO> getTaxStatistics() {
         // Provides aggregated fiscal data for management oversight
         return ResponseEntity.ok(taxationService.getTaxStatistics());

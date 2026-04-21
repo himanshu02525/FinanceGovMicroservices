@@ -13,4 +13,6 @@ public class DisclosureCreateRequestDTO {
 
     @NotNull(message = "Type is required (INCOME or EXPENSE)")
     private DisclosureType type; // Specifies if this is an Income or Expense report
+    
+    private Long userId;
 }

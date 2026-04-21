@@ -30,7 +30,6 @@ public class FinancialProgramController {
 
     
     private final FinancialProgramService service;
-    private final SubsidyService subsidyService; // needed for budgetUsed
 
     @PostMapping("/save")
     public ResponseEntity<FinancialProgramResponse> createProgram(@RequestBody FinancialProgramRequest request) {

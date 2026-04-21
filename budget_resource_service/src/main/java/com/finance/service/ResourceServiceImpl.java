@@ -11,6 +11,8 @@ import com.finance.dto.ResourceRequestDTO;
 import com.finance.dto.ResourceResponseDTO;
 import com.finance.enums.ResourceStatus;
 import com.finance.exceptions.InvalidResourceStatusException;
+import com.finance.exceptions.ProgramNotFound;
+import com.finance.exceptions.ResourceNotFoundException;
 import com.finance.model.Resource;
 import com.finance.repository.ResourceRepository;
 
@@ -20,96 +22,84 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ResourceServiceImpl implements ResourceService {
 
-    private final ResourceRepository resourceRepository;
+	private final ResourceRepository resourceRepository;
 
-    // ✅ NEW – Feign client instead of FinancialProgramRepository
-    private final FinancialProgramClient financialProgramClient;
+	// ✅ NEW – Feign client instead of FinancialProgramRepository
+	private final FinancialProgramClient financialProgramClient;
 
-    private ResourceStatus mapStatus(String status) {
-        try {
-            return ResourceStatus.valueOf(status.toUpperCase());
-        } catch (Exception ex) {
-            throw new InvalidResourceStatusException(
-                    "Resource status must be AVAILABLE or UTILIZED");
-        }
-    }
+	private ResourceStatus mapStatus(String status) {
+		try {
+			return ResourceStatus.valueOf(status.toUpperCase());
+		} catch (Exception ex) {
+			throw new InvalidResourceStatusException("Resource status must be AVAILABLE or UTILIZED");
+		}
+	}
 
-    @Override
-    public ResourceResponseDTO createResource(ResourceRequestDTO dto) {
+	@Override
+	public ResourceResponseDTO createResource(ResourceRequestDTO dto) {
 
-        // ✅ MICROservice-safe: Check Program EXISTS via Feign
-        FinancialProgramResponseDTO program =
-                financialProgramClient.getProgramById(dto.getProgramId());
+		FinancialProgramResponseDTO program; // ✅ declare first
 
-        // ✅ MICROservice-safe: Check Program ACTIVE
-        if (!"ACTIVE".equalsIgnoreCase(program.getStatus())) {
-            throw new IllegalStateException(
-              "Resources can be allocated only when the program status is ACTIVE");
-        }
+		try {
+			program = financialProgramClient.getProgramById(dto.getProgramId());
+		} catch (RuntimeException ex) {
+			throw new ProgramNotFound("Program not found with id : " + dto.getProgramId() + " So can't allocate the resources ");
+		}
 
-        Resource resource = Resource.builder()
-                .programId(dto.getProgramId())
-                .type(dto.getType())
-                .quantity(dto.getQuantity())
-                .status(mapStatus(dto.getStatus()))
-                .build();
+		
+		// ✅ Now program is accessible
+		if (!"ACTIVE".equalsIgnoreCase(program.getStatus())) {
+			throw new IllegalStateException("Resources can be allocated only when the program status is ACTIVE");
+		}
 
-        Resource saved = resourceRepository.save(resource);
+		Resource resource = Resource.builder().programId(dto.getProgramId()).type(dto.getType())
+				.quantity(dto.getQuantity()).status(mapStatus(dto.getStatus())).build();
 
-        return ResourceResponseDTO.builder()
-                .resourceId(saved.getResourceId())
-                .programId(saved.getProgramId())
-                .type(saved.getType())
-                .quantity(saved.getQuantity())
-                .status(saved.getStatus().name())
-                .build();
-    }
+		Resource saved = resourceRepository.save(resource);
 
-    @Override
-    public List<ResourceResponseDTO> getResourcesByProgramId(Long programId) {
+		return ResourceResponseDTO.builder().resourceId(saved.getResourceId()).programId(saved.getProgramId())
+				.type(saved.getType()).quantity(saved.getQuantity()).status(saved.getStatus().name()).build();
+	}
 
-        List<ResourceResponseDTO> responseList = new ArrayList<>();
+	@Override
+	public List<ResourceResponseDTO> getResourcesByProgramId(Long programId) {
 
-        for (Resource resource :
-                resourceRepository.findByProgramId(programId)) {
+		List<Resource> resources = resourceRepository.findByProgramId(programId);
 
-            responseList.add(
-                    ResourceResponseDTO.builder()
-                            .resourceId(resource.getResourceId())
-                            .programId(resource.getProgramId())
-                            .type(resource.getType())
-                            .quantity(resource.getQuantity())
-                            .status(resource.getStatus().name())
-                            .build());
-        }
+		if (resources.isEmpty()) {
+			throw new ResourceNotFoundException("No resources exist for programId: " + programId);
+		}
 
-        return responseList;
-    }
+		return resources.stream()
+				.map(resource -> ResourceResponseDTO.builder().resourceId(resource.getResourceId())
+						.programId(resource.getProgramId()).type(resource.getType()).quantity(resource.getQuantity())
+						.status(resource.getStatus().name()).build())
+				.toList();
+	}
 
-    @Override
-    public List<ResourceResponseDTO> getAllocatedResources() {
+	@Override
+	public List<ResourceResponseDTO> getAllocatedResources() {
 
-        List<ResourceResponseDTO> responseList = new ArrayList<>();
+		List<Resource> resources = resourceRepository.findByStatus(ResourceStatus.UTILIZED);
 
-        for (Resource resource :
-                resourceRepository.findByStatus(ResourceStatus.UTILIZED)) {
+		if (resources.isEmpty()) {
+			throw new IllegalStateException("No allocated resources exist");
+		}
 
-            responseList.add(
-                    ResourceResponseDTO.builder()
-                            .resourceId(resource.getResourceId())
-                            .programId(resource.getProgramId())
-                            .type(resource.getType())
-                            .quantity(resource.getQuantity())
-                            .status(resource.getStatus().name())
-                            .build());
-        }
+		List<ResourceResponseDTO> responseList = new ArrayList<>();
 
-        return responseList;
-    }
+		for (Resource resource : resources) {
+			responseList.add(ResourceResponseDTO.builder().resourceId(resource.getResourceId())
+					.programId(resource.getProgramId()).type(resource.getType()).quantity(resource.getQuantity())
+					.status(resource.getStatus().name()).build());
+		}
 
-    @Override
-    public String deleteResource(Long resourceId) {
-        resourceRepository.deleteById(resourceId);
-        return "Resource deleted successfully";
-    }
+		return responseList;
+	}
+
+	@Override
+	public String deleteResource(Long resourceId) {
+		resourceRepository.deleteById(resourceId);
+		return "Resource deleted successfully";
+	}
 }

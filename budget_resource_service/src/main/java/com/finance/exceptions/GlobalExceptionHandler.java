@@ -24,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-
 	private Map<String, Object> buildBody(HttpStatus status, String message, String errorCode, String path) {
 
 		Map<String, Object> body = new LinkedHashMap<>();
@@ -123,13 +122,13 @@ public class GlobalExceptionHandler {
 	 * EXCEPTIONS ==========================================================
 	 */
 
-	@ExceptionHandler({ ProgramNotFound.class, AllocationNotFoundException.class })
+	@ExceptionHandler({ ProgramNotFound.class, AllocationNotFoundException.class, ResourceNotFoundException.class })
 	public ResponseEntity<Map<String, Object>> handleNotFoundExceptions(RuntimeException ex,
 			HttpServletRequest request) {
 
 		log.warn("Resource not found at {} : {}", request.getRequestURI(), ex.getMessage());
 
-		return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), "RESOURCE_NOT_FOUND", request);
+		return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), "Issue With The PROGRAM_ID", request);
 	}
 
 	/*
@@ -142,7 +141,7 @@ public class GlobalExceptionHandler {
 
 		log.error("Unhandled exception at {}", request.getRequestURI(), ex);
 
-		return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error occurred. Please try again later.",
+		return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error occured please see the logs for more info ",
 				"UNEXPECTED_ERROR", request);
 	}
 }

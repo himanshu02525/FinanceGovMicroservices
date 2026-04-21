@@ -52,11 +52,10 @@ public class BudgetAllocationServiceImpl implements BudgetAllocationService {
 		FinancialProgramResponseDTO program;
 
 		try {
-		    program = financialProgramClient.getProgramById(dto.getProgramId());
+			program = financialProgramClient.getProgramById(dto.getProgramId());
 		} catch (FeignException ex) {
-		    // ✅ ALWAYS throw domain exception
-		    throw new ProgramNotFound(
-		            "Program not found with ID: " + dto.getProgramId());
+			// ✅ ALWAYS throw domain exception
+			throw new ProgramNotFound("Program not found with ID: " + dto.getProgramId());
 		}
 
 		if (!"ACTIVE".equalsIgnoreCase(program.getStatus())) {
@@ -87,6 +86,11 @@ public class BudgetAllocationServiceImpl implements BudgetAllocationService {
 		List<BudgetAllocationResponseDTO> responseList = new ArrayList<>();
 
 		List<BudgetAllocation> allocations = budgetAllocationRepository.findAll();
+		
+		if(allocations.isEmpty())
+		{
+			throw new AllocationNotFoundException(" No Allocations Present till now ");
+		}
 
 		logger.debug("Total allocations found: {}", allocations.size());
 
@@ -104,8 +108,15 @@ public class BudgetAllocationServiceImpl implements BudgetAllocationService {
 
 		logger.info("Generating budget summary for Program ID: {}", programId);
 
-		// ✅ MICROservice-safe: base budget via Feign
-		FinancialProgramResponseDTO program = financialProgramClient.getProgramById(programId);
+		FinancialProgramResponseDTO program;
+
+		try {
+			// ✅ MICROservice-safe: check Program exists via Feign
+			program = financialProgramClient.getProgramById(programId);
+		} catch (RuntimeException ex) {
+			// ✅ Translate remote failure into domain exception
+			throw new ProgramNotFound("Program not found with id: " + programId);
+		}
 
 		BigDecimal baseBudget = BigDecimal.valueOf(program.getBudget());
 
@@ -114,7 +125,12 @@ public class BudgetAllocationServiceImpl implements BudgetAllocationService {
 		BigDecimal remainingBase = baseBudget.subtract(totalAllocated);
 
 		// ✅ MICROservice-safe: used amount via Feign
-		BigDecimal totalUsed = financialProgramClient.getApprovedAmount(programId);
+		BigDecimal totalUsed;
+		try {
+			totalUsed = financialProgramClient.getApprovedAmount(programId);
+		} catch (RuntimeException ex) {
+			throw new ProgramNotFound("Unable to fetch approved amount for Program ID: " + programId);
+		}
 
 		BigDecimal remainingAllocated = totalAllocated.subtract(totalUsed);
 

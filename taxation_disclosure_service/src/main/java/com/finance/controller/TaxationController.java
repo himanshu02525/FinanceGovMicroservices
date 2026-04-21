@@ -28,7 +28,7 @@ public class TaxationController {
         return ResponseEntity.ok(taxationService.getTaxRecordByTaxId(taxId));
     }
 
-    @GetMapping("/admin/all_taxrecords")
+    @GetMapping("/all_taxrecords")
     public ResponseEntity<List<TaxResponseDTO>> getAllRecords() {
         // Returns list of all tax entries for government audit
         return ResponseEntity.ok(taxationService.getAllTaxRecords());

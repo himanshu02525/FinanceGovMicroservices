@@ -27,7 +27,7 @@ public class DisclosureController {
         return ResponseEntity.ok(disclosureService.processDisclosure(request)); 
     }
 
-    @GetMapping("/all")
+    @GetMapping("/all_disclosures")
     public ResponseEntity<List<DisclosureResponseDTO>> getAllDisclosures() {
         // Retrieves a complete history of all financial disclosures for administrative review
         logger.info("REST request to fetch all disclosures"); 

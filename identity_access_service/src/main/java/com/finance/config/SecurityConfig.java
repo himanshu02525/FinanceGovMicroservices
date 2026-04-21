@@ -34,7 +34,6 @@ public class SecurityConfig {
 	private final GlobalExceptionHandler globalExceptionHandler;
 
 	@Bean
-
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
 		http
@@ -53,7 +52,7 @@ public class SecurityConfig {
 
 						/* ================= PUBLIC ================= */
 
-						.requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/**").permitAll()
+						.requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/**","/actuator/**").permitAll()
 
 						/* ================= COMPLIANCE ================= */
 
@@ -175,7 +174,7 @@ public class SecurityConfig {
 
 						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/reports/summary")
 
-						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("applications/fetchByEntity/{entityId}")
+						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/applications/fetchByEntity/{entityId}")
 
 						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/taxation/taxrecords/{taxId}")
 						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/disclosure/all_disclosures")

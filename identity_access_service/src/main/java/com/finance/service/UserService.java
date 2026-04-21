@@ -1,38 +1,27 @@
 package com.finance.service;
 
 import java.util.List;
+
 import com.finance.dto.UserCreationRequest;
+import com.finance.dto.UserResponseDto;
 import com.finance.model.User;
 
-/**
- * Management Layer for User Identities.
- * Handles administrative actions like Officer creation, status toggling, and profile updates.
- */
 public interface UserService {
 
-    // Used by Admins to manually onboard Officers/Auditors
-    String createOfficer(UserCreationRequest request);
-
-    // Oversight: View all registered entities
-    List<User> findAllUsers();
-    
+    // ========== INTERNAL (ENTITY) ==========
     User findUserById(Long id);
-
-    // Data Retrieval: Standard lookups
-    User getUserById(Long id);
-
     User getUserByEmail(String email);
-
     User getUserByUserName(String username);
+    List<User> findAllUsers();
 
-    // Profile Management: For self-service or admin corrections
+    // ========== API SAFE (DTO) ==========
+    UserResponseDto getUserById(Long id);
+    List<UserResponseDto> getAllUserDtos();
+
+    // ========== ACTIONS ==========
+    String createOfficer(UserCreationRequest request);
     User updateUser(Long id, User updatedUser);
-
-    // Security Control: Instantly ACTIVE, SUSPENDED, or INACTIVE status
     User updateUserStatus(Long id, String status);
-
-    // Final Action: Permanent removal (usually restricted to Super Admins)
     void deleteUser(Long id);
-    
     void deleteOfficer(Long id);
 }

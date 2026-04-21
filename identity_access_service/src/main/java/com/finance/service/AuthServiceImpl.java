@@ -29,83 +29,122 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class AuthServiceImpl implements AuthService {
 
-	private final UserRepository userRepository;
-	private final RoleRepository roleRepository;
-	private final TokenRepository tokenRepository;
-	private final PasswordEncoder passwordEncoder;
-	private final JwtService jwtService;
-	private final UserDetailsService userDetailsService;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final TokenRepository tokenRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final UserDetailsService userDetailsService;
 
-	@Override
-	public String register(RegisterRequest request) {
-		log.info("Registering new citizen: {}", request.getEmail());
+    // =============================
+    // REGISTER (PUBLIC)
+    // =============================
+    @Override
+    public String register(RegisterRequest request) {
 
-		if (userRepository.existsByEmail(request.getEmail())) {
-			throw new RuntimeException("This email is already associated with an account.");
-		}
+        log.info("Registering new citizen: {}", request.getEmail());
 
-		Role role = roleRepository.findByRoleName(RoleType.ROLE_CITIZEN)
-				.orElseThrow(() -> new RuntimeException("Critical Error: Default role not found."));
+        // ✅ PRE-CHECKS TO AVOID DB CONSTRAINT ERRORS
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new IllegalArgumentException("Username already exists. Please choose a different username.");
+        }
 
-		User user = new User();
-		user.setUsername(request.getUsername());
-		user.setEmail(request.getEmail());
-		user.setPassword(passwordEncoder.encode(request.getPassword()));
-		user.setRole(role);
-		user.setPhone(request.getPhone());
-		user.setStatus("ACTIVE");
-		user.setVerified(false);
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email already exists. Please use a different email.");
+        }
 
-		userRepository.save(user);
-		return "Registration successful! You can now log in.";
-	}
+        if (userRepository.existsByPhone(request.getPhone())) {
+            throw new IllegalArgumentException("Phone number already exists. Please use a different phone number.");
+        }
 
-	@Override
-	public AuthResponse login(LoginRequest request) {
-		log.info("Login attempt for: {}", request.getEmail());
+        Role role = roleRepository.findByRoleName(RoleType.ROLE_CITIZEN)
+                .orElseThrow(() ->
+                        new RuntimeException("Critical error: Default role not found."));
 
-		User user = userRepository.findByEmail(request.getEmail())
-				.orElseThrow(() -> new UserNotFoundException("No account found with that email."));
+        User user = new User();
+        user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setPhone(request.getPhone());
+        user.setRole(role);
+        user.setStatus("ACTIVE");
+        user.setVerified(false);
 
-		if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-			log.warn("Invalid password for user: {}", request.getEmail());
-			throw new RuntimeException("Invalid email or password.");
-		}
+        userRepository.save(user);
 
-		revokeAllUserTokens(user);
+        log.info("User registered successfully: {}", request.getEmail());
+        return "Registration successful! You can now log in.";
+    }
 
-		//Load UserDetails from your CustomUserDetailsService
-		UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+    // =============================
+    // LOGIN
+    // =============================
+    @Override
+    public AuthResponse login(LoginRequest request) {
 
-		// Generate fresh JWT
-		String token = jwtService.generateToken(userDetails);
+        log.info("Login attempt for: {}", request.getEmail());
 
-		saveUserToken(user, token);
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() ->
+                        new UserNotFoundException("No account found with that email."));
 
-		String roleName = user.getRole().getRoleName().name();
-		String endpoint = RoleRedirectUtil.getEndPoint(roleName);
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            log.warn("Invalid password attempt for {}", request.getEmail());
+            throw new IllegalArgumentException("Invalid email or password.");
+        }
 
-		log.info("User {} logged in successfully. Redirecting to {}", user.getEmail(), endpoint);
+        // ✅ Revoke old tokens
+        revokeAllUserTokens(user);
 
-		return new AuthResponse(token, "Welcome back!", roleName, endpoint);
-	}
+        // ✅ Load Spring Security user
+        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
 
-	private void saveUserToken(User user, String jwtToken) {
-		Token token = Token.builder().user(user).token(jwtToken).expired(false).revoked(false).build();
+        // ✅ Generate JWT
+        String jwtToken = jwtService.generateToken(userDetails);
 
-		tokenRepository.save(token);
-	}
+        saveUserToken(user, jwtToken);
 
-	private void revokeAllUserTokens(User user) {
-		var validTokens = tokenRepository.findAllValidTokensByUser(user.getId());
-		if (validTokens.isEmpty())
-			return;
+        String roleName = user.getRole().getRoleName().name();
+        String redirectEndpoint = RoleRedirectUtil.getEndPoint(roleName);
 
-		validTokens.forEach(t -> {
-			t.setExpired(true);
-			t.setRevoked(true);
-		});
+        log.info("User {} logged in successfully", user.getEmail());
 
-		tokenRepository.saveAll(validTokens);
-	}
+        return new AuthResponse(
+                jwtToken,
+                "Welcome back!",
+                roleName,
+                redirectEndpoint
+        );
+    }
+
+    // =============================
+    // TOKEN HANDLING
+    // =============================
+    private void saveUserToken(User user, String jwtToken) {
+
+        Token token = Token.builder()
+                .user(user)
+                .token(jwtToken)
+                .expired(false)
+                .revoked(false)
+                .build();
+
+        tokenRepository.save(token);
+    }
+
+    private void revokeAllUserTokens(User user) {
+
+        var validTokens = tokenRepository.findAllValidTokensByUser(user.getId());
+
+        if (validTokens.isEmpty()) {
+            return;
+        }
+
+        validTokens.forEach(token -> {
+            token.setExpired(true);
+            token.setRevoked(true);
+        });
+
+        tokenRepository.saveAll(validTokens);
+    }
 }

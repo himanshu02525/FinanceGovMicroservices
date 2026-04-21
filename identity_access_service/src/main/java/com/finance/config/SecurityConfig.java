@@ -29,21 +29,22 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-            // JWT → disable CSRF
+            /* ================= CSRF ================= */
             .csrf(AbstractHttpConfigurer::disable)
 
-            // Custom 401 / 403 handling
+            /* ================= ERROR HANDLING ================= */
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint(globalExceptionHandler)
                 .accessDeniedHandler(globalExceptionHandler)
             )
 
+            /* ================= AUTHORIZATION ================= */
             .authorizeHttpRequests(auth -> auth
 
-                /* ================= PUBLIC ================= */
+                /* ---------- PUBLIC ---------- */
                 .requestMatchers("/api/auth/**").permitAll()
 
-                /* ================= COMPLIANCE ================= */
+                /* ---------- COMPLIANCE ---------- */
                 .requestMatchers(
                     "/compliance",
                     "/compliance/{id}",
@@ -55,31 +56,30 @@ public class SecurityConfig {
                     "ROLE_ADMIN"
                 )
 
-                // Compliance Officer exclusive write access
-                .requestMatchers(
-                    "/compliance/**"
-                ).hasAuthority("ROLE_COMPLIANCE_OFFICER")
+                .requestMatchers("/compliance/**")
+                .hasAuthority("ROLE_COMPLIANCE_OFFICER")
 
-                /* ================= AUDIT ================= */
+                /* ---------- AUDIT ---------- */
                 .requestMatchers(
                     "/audit",
                     "/audit/{id}",
                     "/audit/officer/{officerId}"
                 ).hasAuthority("ROLE_GOVERNMENT_AUDITOR")
 
-                .requestMatchers("/audit/summary").hasAnyAuthority(
+                .requestMatchers("/audit/summary")
+                .hasAnyAuthority(
                     "ROLE_GOVERNMENT_AUDITOR",
                     "ROLE_PROGRAM_MANAGER",
                     "ROLE_ADMIN"
                 )
 
-                /* ================= PROGRAM MANAGER ================= */
+                /* ---------- PROGRAM MANAGER ---------- */
                 .requestMatchers(
                     "/api/resources/**",
                     "/api/budget-allocations/**"
                 ).hasAuthority("ROLE_PROGRAM_MANAGER")
 
-                /* ================= ANALYTICS ================= */
+                /* ---------- ANALYTICS ---------- */
                 .requestMatchers(
                     "/api/analytics/reports",
                     "/api/analytics/dashboard"
@@ -88,27 +88,77 @@ public class SecurityConfig {
                     "ROLE_GOVERNMENT_AUDITOR"
                 )
 
-                /* ================= CITIZEN ================= */
+                /* ---------- CITIZEN ---------- */
+                .requestMatchers("/compliance/entity/{entityId}")
+                .hasAuthority("ROLE_CITIZEN")
+
+                /* ---------- ADMIN ---------- */
+                .requestMatchers("/api/admin/**")
+                .hasAuthority("ROLE_ADMIN")
+
+                /* =================================================
+                   ✅ ✅ REPORTS ACCESS — COMPLETE & FINAL
+                   ================================================= */
+
+                /* PROGRAM MANAGER */
                 .requestMatchers(
-                    "/compliance/entity/{entityId}"
-                ).hasAuthority("ROLE_CITIZEN")
+                    "/reports/generate/PROGRAM",
+                    "/reports/scope/PROGRAM"
+                ).hasAnyAuthority(
+                    "ROLE_PROGRAM_MANAGER",
+                    "ROLE_ADMIN"
+                )
 
-                /* ================= ADMIN ================= */
-                .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
+                /* FINANCIAL OFFICER */
+                .requestMatchers(
+                    "/reports/generate/SUBSIDY",
+                    "/reports/scope/SUBSIDY"
+                ).hasAnyAuthority(
+                    "ROLE_FINANCIAL_OFFICER",
+                    "ROLE_ADMIN"
+                )
 
-                /* ================= FALLBACK ================= */
+                /* GOVERNMENT AUDITOR */
+                .requestMatchers(
+                    "/reports/generate/TAX",
+                    "/reports/scope/TAX",
+                    "/reports/{id}"
+                ).hasAnyAuthority(
+                    "ROLE_GOVERNMENT_AUDITOR",
+                    "ROLE_ADMIN"
+                )
+
+                /* SUMMARY — ALL REPORT ROLES */
+                .requestMatchers("/reports/summary")
+                .hasAnyAuthority(
+                    "ROLE_PROGRAM_MANAGER",
+                    "ROLE_FINANCIAL_OFFICER",
+                    "ROLE_GOVERNMENT_AUDITOR",
+                    "ROLE_ADMIN"
+                )
+
+                /* ADMIN — DYNAMIC SCOPE ACCESS */
+                .requestMatchers(
+                    "/reports/generate/**",
+                    "/reports/scope/**"
+                ).hasAuthority("ROLE_ADMIN")
+
+                /* ---------- FALLBACK ---------- */
                 .anyRequest().authenticated()
             )
 
-            // Stateless JWT session
+            /* ================= SESSION ================= */
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
 
+            /* ================= AUTH PROVIDER ================= */
             .authenticationProvider(authenticationProvider)
 
+            /* ================= JWT FILTER ================= */
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
 
+            /* ================= LOGOUT ================= */
             .logout(logout -> logout
                 .logoutUrl("/api/auth/logout")
                 .addLogoutHandler(logoutHandler)
@@ -123,5 +173,3 @@ public class SecurityConfig {
         return http.build();
     }
 }
-
-

@@ -123,7 +123,7 @@ public class EntityDocumentServiceImpl implements EntityDocumentService {
             "Your document has been rejected. Please upload a valid document"
         );
     }
-
+    //
     // =====================================================
     // Common Notification Method
     // =====================================================

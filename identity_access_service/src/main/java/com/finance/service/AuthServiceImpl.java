@@ -110,10 +110,11 @@ public class AuthServiceImpl implements AuthService {
         log.info("User {} logged in successfully", user.getEmail());
 
         return new AuthResponse(
+                user.getId(),          // ✅ userId added
                 jwtToken,
                 "Welcome back!",
                 roleName,
-                redirectEndpoint
+                redirectEndpoint       // ✅ FIXED HERE
         );
     }
 

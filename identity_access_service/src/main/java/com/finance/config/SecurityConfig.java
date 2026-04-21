@@ -1,8 +1,8 @@
 package com.finance.config;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -15,161 +15,269 @@ import org.springframework.security.web.authentication.logout.LogoutHandler;
 
 import com.finance.exceptions.GlobalExceptionHandler;
 
+import lombok.RequiredArgsConstructor;
+
 @Configuration
+
 @EnableWebSecurity
+
 @RequiredArgsConstructor
+
 public class SecurityConfig {
 
-    private final JwtFilter jwtAuthFilter;
-    private final AuthenticationProvider authenticationProvider;
-    private final LogoutHandler logoutHandler;
-    private final GlobalExceptionHandler globalExceptionHandler;
+	private final JwtFilter jwtAuthFilter;
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+	private final AuthenticationProvider authenticationProvider;
 
-        http
-            /* ================= CSRF ================= */
-            .csrf(AbstractHttpConfigurer::disable)
+	private final LogoutHandler logoutHandler;
 
-            /* ================= ERROR HANDLING ================= */
-            .exceptionHandling(ex -> ex
-                .authenticationEntryPoint(globalExceptionHandler)
-                .accessDeniedHandler(globalExceptionHandler)
-            )
+	private final GlobalExceptionHandler globalExceptionHandler;
 
-            /* ================= AUTHORIZATION ================= */
-            .authorizeHttpRequests(auth -> auth
+	@Bean
 
-                /* ---------- PUBLIC ---------- */
-                .requestMatchers("/api/auth/**").permitAll()
+	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-                /* ---------- COMPLIANCE ---------- */
-                .requestMatchers(
-                    "/compliance",
-                    "/compliance/{id}",
-                    "/compliance/entity/{entityId}",
-                    "/compliance/summary"
-                ).hasAnyAuthority(
-                    "ROLE_COMPLIANCE_OFFICER",
-                    "ROLE_FINANCIAL_OFFICER",
-                    "ROLE_ADMIN"
-                )
+		http
 
-                .requestMatchers("/compliance/**")
-                .hasAuthority("ROLE_COMPLIANCE_OFFICER")
+				// JWT → disable CSRF
 
-                /* ---------- AUDIT ---------- */
-                .requestMatchers(
-                    "/audit",
-                    "/audit/{id}",
-                    "/audit/officer/{officerId}"
-                ).hasAuthority("ROLE_GOVERNMENT_AUDITOR")
+				.csrf(AbstractHttpConfigurer::disable)
 
-                .requestMatchers("/audit/summary")
-                .hasAnyAuthority(
-                    "ROLE_GOVERNMENT_AUDITOR",
-                    "ROLE_PROGRAM_MANAGER",
-                    "ROLE_ADMIN"
-                )
+				// Custom 401 / 403 handling
 
-                /* ---------- PROGRAM MANAGER ---------- */
-                .requestMatchers(
-                    "/api/resources/**",
-                    "/api/budget-allocations/**"
-                ).hasAuthority("ROLE_PROGRAM_MANAGER")
+				.exceptionHandling(ex -> ex.authenticationEntryPoint(globalExceptionHandler).accessDeniedHandler(
 
-                /* ---------- ANALYTICS ---------- */
-                .requestMatchers(
-                    "/api/analytics/reports",
-                    "/api/analytics/dashboard"
-                ).hasAnyAuthority(
-                    "ROLE_ADMIN",
-                    "ROLE_GOVERNMENT_AUDITOR"
-                )
+						globalExceptionHandler))
 
-                /* ---------- CITIZEN ---------- */
-                .requestMatchers("/compliance/entity/{entityId}")
-                .hasAuthority("ROLE_CITIZEN")
+				.authorizeHttpRequests(auth -> auth
 
-                /* ---------- ADMIN ---------- */
-                .requestMatchers("/api/admin/**")
-                .hasAuthority("ROLE_ADMIN")
+						/* ================= PUBLIC ================= */
 
-                /* =================================================
-                   ✅ ✅ REPORTS ACCESS — COMPLETE & FINAL
-                   ================================================= */
+						.requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/**").permitAll()
 
-                /* PROGRAM MANAGER */
-                .requestMatchers(
-                    "/reports/generate/PROGRAM",
-                    "/reports/scope/PROGRAM"
-                ).hasAnyAuthority(
-                    "ROLE_PROGRAM_MANAGER",
-                    "ROLE_ADMIN"
-                )
+						/* ================= COMPLIANCE ================= */
 
-                /* FINANCIAL OFFICER */
-                .requestMatchers(
-                    "/reports/generate/SUBSIDY",
-                    "/reports/scope/SUBSIDY"
-                ).hasAnyAuthority(
-                    "ROLE_FINANCIAL_OFFICER",
-                    "ROLE_ADMIN"
-                )
+						// View Compliance (GET)
+						.requestMatchers(HttpMethod.GET, "/compliance", "/compliance/{id}",
+								"/compliance/entity/{entityId}", "/compliance/summary")
+						.hasAnyAuthority("ROLE_COMPLIANCE_OFFICER", "ROLE_FINANCIAL_OFFICER", "ROLE_ADMIN")
 
-                /* GOVERNMENT AUDITOR */
-                .requestMatchers(
-                    "/reports/generate/TAX",
-                    "/reports/scope/TAX",
-                    "/reports/{id}"
-                ).hasAnyAuthority(
-                    "ROLE_GOVERNMENT_AUDITOR",
-                    "ROLE_ADMIN"
-                )
+						// Create Compliance (POST)
+						.requestMatchers(HttpMethod.POST, "/compliance")
+						.hasAnyAuthority("ROLE_COMPLIANCE_OFFICER", "ROLE_ADMIN")
 
-                /* SUMMARY — ALL REPORT ROLES */
-                .requestMatchers("/reports/summary")
-                .hasAnyAuthority(
-                    "ROLE_PROGRAM_MANAGER",
-                    "ROLE_FINANCIAL_OFFICER",
-                    "ROLE_GOVERNMENT_AUDITOR",
-                    "ROLE_ADMIN"
-                )
+						// Update Compliance (PUT / PATCH)
+						.requestMatchers(HttpMethod.PUT, "/compliance/{id}")
+						.hasAnyAuthority("ROLE_COMPLIANCE_OFFICER", "ROLE_ADMIN")
+						.requestMatchers(HttpMethod.PATCH, "/compliance/{id}")
+						.hasAnyAuthority("ROLE_COMPLIANCE_OFFICER", "ROLE_ADMIN")
 
-                /* ADMIN — DYNAMIC SCOPE ACCESS */
-                .requestMatchers(
-                    "/reports/generate/**",
-                    "/reports/scope/**"
-                ).hasAuthority("ROLE_ADMIN")
+						// Delete Compliance (DELETE)
+						.requestMatchers(HttpMethod.DELETE, "/compliance/{id}").hasAuthority("ROLE_ADMIN")
 
-                /* ---------- FALLBACK ---------- */
-                .anyRequest().authenticated()
-            )
+						// ================= REPORTS =================
 
-            /* ================= SESSION ================= */
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
+						// Compliance Reports
+						.requestMatchers(HttpMethod.GET, "/api/reports/compliance")
+						.hasAuthority("ROLE_COMPLIANCE_OFFICER")
 
-            /* ================= AUTH PROVIDER ================= */
-            .authenticationProvider(authenticationProvider)
+						// Tax Reports
+						.requestMatchers(HttpMethod.GET, "/api/reports/tax").hasAuthority("ROLE_COMPLIANCE_OFFICER")
 
-            /* ================= JWT FILTER ================= */
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+						// ================= TAXATION =================
 
-            /* ================= LOGOUT ================= */
-            .logout(logout -> logout
-                .logoutUrl("/api/auth/logout")
-                .addLogoutHandler(logoutHandler)
-                .logoutSuccessHandler((req, res, auth) -> {
-                    SecurityContextHolder.clearContext();
-                    res.setStatus(200);
-                    res.setContentType("application/json");
-                    res.getWriter().write("{\"message\":\"Logout successful\"}");
-                })
-            );
+						// Verify Tax Records
+						.requestMatchers(HttpMethod.POST, "/taxation/taxrecords/{entityId}/verify")
+						.hasAuthority("ROLE_COMPLIANCE_OFFICER")
 
-        return http.build();
-    }
+						// View Tax Record
+						.requestMatchers(HttpMethod.GET, "/taxation/taxrecords/{taxId}")
+						.hasAuthority("ROLE_COMPLIANCE_OFFICER")
+
+						// Update Tax Record
+						.requestMatchers(HttpMethod.PUT, "/taxation/taxrecords/{taxId}")
+						.hasAuthority("ROLE_COMPLIANCE_OFFICER")
+
+						.requestMatchers(HttpMethod.PATCH, "/taxation/taxrecords/{taxId}")
+						.hasAuthority("ROLE_COMPLIANCE_OFFICER")
+
+						// Delete Tax Record
+						.requestMatchers(HttpMethod.DELETE, "/taxation/taxrecords/{taxId}").hasAuthority("ROLE_ADMIN")
+
+						// Compliance Officer exclusive write access
+
+						.requestMatchers("/compliance/**").hasAuthority("ROLE_COMPLIANCE_OFFICER")
+
+						/* ================= AUDIT ================= */
+
+						.requestMatchers("/audit", "/audit/{id}", "/audit/officer/{officerId}")
+
+						.hasAuthority("ROLE_GOVERNMENT_AUDITOR")
+
+						.requestMatchers("/reports/generate/TAX")
+
+						.hasAuthority("ROLE_GOVERNMENT_AUDITOR").requestMatchers("/reports/scope/TAX")
+
+						.hasAuthority("ROLE_GOVERNMENT_AUDITOR").requestMatchers("/reports/summary")
+
+						.hasAuthority("ROLE_GOVERNMENT_AUDITOR").requestMatchers("/reports/{id}")
+						.hasAuthority("ROLE_GOVERNMENT_AUDITOR")
+
+						.requestMatchers("/audit/summary")
+
+						.hasAnyAuthority("ROLE_GOVERNMENT_AUDITOR", "ROLE_PROGRAM_MANAGER", "ROLE_ADMIN")
+
+						.requestMatchers("/reports/analytics")
+
+						.hasAuthority("ROLE_GOVERNMENT_AUDITOR")
+
+						.requestMatchers("/tax/summary")
+
+						.hasAuthority("ROLE_GOVERNMENT_AUDITOR")
+
+						/* ================= FINANCIAL_OFFICER ================= */
+
+						.requestMatchers("/subsidy/*").hasAuthority("ROLE_FINANCIAL_OFFICER")
+
+						// .requestMatchers("/applications/fetchAll").hasAuthority("ROLE_FINANCIAL_OFFICER")
+
+						// .requestMatchers("/applications/fetchByProgram").hasAuthority("ROLE_FINANCIAL_OFFICER")
+
+						.requestMatchers("/applications/approve/{id}").hasAuthority("ROLE_FINANCIAL_OFFICER")
+
+						.requestMatchers("/applications/reject/{id}").hasAuthority("ROLE_FINANCIAL_OFFICER")
+
+						.requestMatchers("/taxation/taxrecords/entity/{entityId}/verify")
+
+						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/taxation/taxrecords/{taxId}/verify")
+
+						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/disclosure/{disclosureId}")
+
+						.hasAuthority("ROLE_FINANCIAL_OFFICER")
+
+						.requestMatchers("/disclosure/{enitityId}/validate-disclosure")
+
+						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/disclosure/{disclosureId}/validate")
+
+						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/reports/generate/SUBSIDY")
+
+						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/reports/scope/SUBSIDY")
+
+						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/reports/summary")
+
+						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("applications/fetchByEntity/{entityId}")
+
+						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/taxation/taxrecords/{taxId}")
+						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/disclosure/all")
+
+						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/taxation/admin/all_taxrecords")
+
+						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/reports/analytics")
+
+						.hasAuthority("ROLE_FINANCIAL_OFFICER")
+
+						/* ================= PROGRAM MANAGER ================= */
+
+						.requestMatchers("/api/resources/**", "/api/budget/**", "/programs/**")
+
+						.hasAuthority("ROLE_PROGRAM_MANAGER").requestMatchers("/reports/generate/PROGRAM")
+
+						.hasAuthority("ROLE_PROGRAM_MANAGER").requestMatchers("/reports/scope/PROGRAM")
+
+						.hasAuthority("ROLE_PROGRAM_MANAGER").requestMatchers("/reports/summary")
+
+						.hasAuthority("ROLE_PROGRAM_MANAGER").requestMatchers("/reports/analytics")
+
+						.hasAuthority("ROLE_PROGRAM_MANAGER")
+
+						/* ================= ANALYTICS ================= */
+
+						.requestMatchers("/api/analytics/reports", "/api/analytics/dashboard")
+
+						.hasAnyAuthority("ROLE_ADMIN", "ROLE_GOVERNMENT_AUDITOR")
+
+						/* ================= CITIZEN ================= */
+
+						.requestMatchers("/compliance/entity/{entityId}").hasAuthority("ROLE_CITIZEN")
+
+						.requestMatchers("/entities/createCitizen").hasAuthority("ROLE_CITIZEN")
+
+						.requestMatchers("/entities/updateCitizenById").hasAuthority("ROLE_CITIZEN")
+
+						.requestMatchers("/applications/fetchByEntity").hasAuthority("ROLE_CITIZEN")
+
+						.requestMatchers("/programs/fetchAll").hasAuthority("ROLE_CITIZEN")
+
+						.requestMatchers("/documents/uploadDoc").hasAuthority("ROLE_CITIZEN")
+
+						.requestMatchers("/documents/updateDoc/**").hasAuthority("ROLE_CITIZEN")
+						.requestMatchers("/enter_taxrecord/**").hasAuthority("ROLE_CITIZEN")
+						.requestMatchers("/taxrecords/{taxId}").hasAuthority("ROLE_CITIZEN")
+
+						.requestMatchers("/disclosure/enter_disclosure").hasAuthority("ROLE_CITIZEN")
+
+						.requestMatchers("/disclosure/all").hasAuthority("ROLE_CITIZEN")
+
+						.requestMatchers("/disclosure/{disclosureId}").hasAuthority("ROLE_CITIZEN")
+
+						/* ================= ADMIN ================= */
+
+						.requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
+
+						.requestMatchers("/entities/createCitizen").hasAuthority("ROLE_ADMIN")
+
+						.requestMatchers("/entities/getAllEntity").hasAuthority("ROLE_ADMIN")
+
+						.requestMatchers("/entities/getCitizenById").hasAuthority("ROLE_ADMIN")
+
+						.requestMatchers("/entities/deleteById").hasAuthority("ROLE_ADMIN")
+
+						.requestMatchers("/entities/approveCitizen").hasAuthority("ROLE_ADMIN")
+
+						.requestMatchers("/reports/**").hasAuthority("ROLE_ADMIN").requestMatchers("/disclosure/all")
+
+						.hasAuthority("ROLE_ADMIN").requestMatchers("/taxation/admin/all-taxrecords")
+
+						.hasAuthority("ROLE_ADMIN").requestMatchers("/documents/getAllDocument")
+
+						.hasAuthority("ROLE_ADMIN").requestMatchers("/documents/getAllDocument")
+
+						.hasAuthority("ROLE_ADMIN").requestMatchers("/documents/verify").hasAuthority("ROLE_ADMIN")
+
+						.requestMatchers("/documents/reject").hasAuthority("ROLE_ADMIN")
+
+						.requestMatchers("/reports/analytics").hasAuthority("ROLE_ADMIN")
+
+						.requestMatchers("/disclosure/all").hasAuthority("ROLE_ADMIN")
+
+						/* ================= FALLBACK ================= */
+
+						.anyRequest().authenticated())
+
+				// Stateless JWT session
+
+				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+				.authenticationProvider(authenticationProvider)
+
+				.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+
+				.logout(logout -> logout.logoutUrl("/api/auth/logout").addLogoutHandler(logoutHandler)
+
+						.logoutSuccessHandler((req, res, auth) -> {
+
+							SecurityContextHolder.clearContext();
+
+							res.setStatus(200);
+
+							res.setContentType("application/json");
+
+							res.getWriter().write("{\"message\":\"Logout successful\"}");
+
+						}));
+
+		return http.build();
+
+	}
+
 }

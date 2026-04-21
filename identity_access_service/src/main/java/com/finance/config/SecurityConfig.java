@@ -274,6 +274,8 @@ public class SecurityConfig {
 						.requestMatchers("/reports/analytics").hasAuthority("ROLE_ADMIN")
 
 						.requestMatchers("/disclosure/all_disclosures").hasAuthority("ROLE_ADMIN")
+						
+						.requestMatchers("/api/notifications/getAllNotification").hasAuthority("ROLE_ADMIN")
 
 						/* ================= FALLBACK ================= */
 

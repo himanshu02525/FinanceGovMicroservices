@@ -112,11 +112,14 @@ public class SubsidyApplicationServiceImpl implements SubsidyApplicationService 
 
     @Override
     public List<SubsidyApplicationResponse> getApplicationsByEntity(Long entityId) {
-        return applicationRepository.findByEntityId(entityId)
-                .stream()
+        List<SubsidyApplication> applications = applicationRepository.findByEntityId(entityId);
+        if (applications.isEmpty()) {
+            throw new ApplicationNotFoundException(entityId);
+        }
+        return applications.stream()
                 .map(this::toResponse)
                 .toList();
-    }
+    } 
 
     private SubsidyApplicationResponse toResponse(SubsidyApplication app) {
         return new SubsidyApplicationResponse(

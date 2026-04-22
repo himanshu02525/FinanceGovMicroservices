@@ -175,7 +175,7 @@ public class SecurityConfig {
 
 						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/reports/summary")
 
-						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("applications/fetchByEntity/{entityId}")
+						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/applications/fetchByEntity/{entityId}")
 
 						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/taxation/taxrecords/{taxId}")
 						.hasAuthority("ROLE_FINANCIAL_OFFICER").requestMatchers("/disclosure/all_disclosures")

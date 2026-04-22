@@ -141,7 +141,18 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 	/* ================= READ OPERATIONS ================= */
 	@Override
 	public List<ComplianceResponse> findAll() {
-		return repository.findAll().stream().map(r -> modelMapper.map(r, ComplianceResponse.class)).toList();
+
+		List<ComplianceResponse> responses = repository.findAll().stream().map(entity -> {
+			ComplianceResponse response = modelMapper.map(entity, ComplianceResponse.class);
+			fetchExternalDetails(entity, response);
+			return response;
+		}).toList();
+
+		if (responses.isEmpty()) {
+			throw new ComplianceNotFoundException("No compliance records available");
+		}
+
+		return responses;
 	}
 
 	@Override
@@ -154,6 +165,7 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 		ComplianceResponse response = modelMapper.map(complianceRecord, ComplianceResponse.class);
 
 		fetchExternalDetails(complianceRecord, response);
+
 		return response;
 	}
 

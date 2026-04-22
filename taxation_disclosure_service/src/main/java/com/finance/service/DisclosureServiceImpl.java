@@ -36,7 +36,7 @@ public class DisclosureServiceImpl implements DisclosureService {
 
     @Override
     @Transactional
-    public DisclosureResponseDTO processDisclosure(DisclosureCreateRequestDTO request) {
+    public DisclosureResponseDTO createDisclosure(DisclosureCreateRequestDTO request) {
         // 1. Verify Entity
         boolean exists;
         try {
@@ -77,40 +77,7 @@ public class DisclosureServiceImpl implements DisclosureService {
         return mapToResponseDTO(saved); 
     }
 
-    @Override
-    @Transactional
-    public List<DisclosureResponseDTO> validateDisclosuresByEntity(Long id, DisclosureStatus s) {
-        List<Disclosure> list = disclosureRepository.findByEntityId(id);
-
-        if (list.isEmpty()) {
-            throw new EntityNotFoundException("No disclosure records found for Entity ID: " + id);
-        }
-
-        list.forEach(d -> d.setStatus(s));
-        List<Disclosure> savedList = disclosureRepository.saveAll(list);
-
-        // ✅ INLINE NOTIFICATION: Bulk Update
-        try {
-            UserDto user = userFeignClient.getUserById(id);
-            if (user != null && user.getEmail() != null) {
-                String msg = (s == DisclosureStatus.VALIDATED) ? 
-                    "Your disclosures have been Validated by the Financial Officer." : 
-                    "Your disclosures have been Rejected. Please review and re-submit.";
-                
-                NotificationRequestDto notification = NotificationRequestDto.builder()
-                        .userId(user.getUserId())
-                        .entityId(id)
-                        .category(NotificationCategory.TAX)
-                        .message(msg)
-                        .build();
-                notificationFeignClient.sendNotification(notification, user.getEmail());
-            }
-        } catch (Exception e) {
-            log.error("Bulk notification failed for entity {}: {}", id, e.getMessage());
-        }
-
-        return savedList.stream().map(this::mapToResponseDTO).collect(Collectors.toList());
-    }
+  
 
     @Override
     @Transactional
@@ -149,6 +116,23 @@ public class DisclosureServiceImpl implements DisclosureService {
         return disclosureRepository.findAll().stream().map(this::mapToResponseDTO).collect(Collectors.toList());
     }
 
+    @Override
+    public List<DisclosureResponseDTO> getAllDisclosuresByEntityId(Long entityId) {
+        // Fetch records from the database
+        List<Disclosure> list = disclosureRepository.findByEntityId(entityId);
+
+        // Check if the list is empty and throw the custom exception
+        if (list.isEmpty()) {
+            log.error("Fetch failed: No disclosure records found for Entity ID: {}", entityId);
+            throw new EntityNotFoundException("No disclosure records found for Entity ID: " + entityId);
+        }
+
+        // Map and return the list of DTOs
+        return list.stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
+    }
+    
     @Override
     public DisclosureResponseDTO getDisclosureByDisclosureId(Long id) {
         Disclosure d = disclosureRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Disclosure " + id + " not found"));

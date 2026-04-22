@@ -24,7 +24,7 @@ public class DisclosureController {
     public ResponseEntity<DisclosureResponseDTO> createDisclosure(@Valid @RequestBody DisclosureCreateRequestDTO request) {
         // Handles the submission of financial data from a citizen or business entity
         logger.info("REST request to submit disclosure for Entity ID: {}", request.getEntityId()); 
-        return ResponseEntity.ok(disclosureService.processDisclosure(request)); 
+        return ResponseEntity.ok(disclosureService.createDisclosure(request)); 
     }
 
     @GetMapping("/all_disclosures")
@@ -40,15 +40,15 @@ public class DisclosureController {
         logger.info("REST request to fetch Disclosure ID: {}", disclosureId); 
         return ResponseEntity.ok(disclosureService.getDisclosureByDisclosureId(disclosureId)); 
     }
-
-    @PatchMapping("/{entityId}/validate-disclosure")
-    public ResponseEntity<List<DisclosureResponseDTO>> validateEntityDisclosures(
-            @PathVariable("entityId") Long entityId,
-            @RequestParam("status") DisclosureStatus status) {
-        // Allows bulk status updates for all disclosures belonging to a specific entity
-        logger.info("REST request: Bulk validating disclosures for Entity ID: {}", entityId); 
-        return ResponseEntity.ok(disclosureService.validateDisclosuresByEntity(entityId, status)); 
+    
+    @GetMapping("/entity/{entityId}")
+    public ResponseEntity<List<DisclosureResponseDTO>> getDisclosureByEntityId(@PathVariable("entityId") Long entityId){
+    	  // Fetches the specific details of  disclosures using its entity ID
+        logger.info("REST request to fetch entity ID: {}", entityId); 
+        return ResponseEntity.ok(disclosureService.getAllDisclosuresByEntityId(entityId)); 
     }
+
+
 
     @PatchMapping("/{disclosureId}/validate")
     public ResponseEntity<DisclosureResponseDTO> validateSingleDisclosure(

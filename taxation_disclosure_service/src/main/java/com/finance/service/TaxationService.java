@@ -16,11 +16,11 @@ public interface TaxationService {
     // Fetch single record by ID
     TaxResponseDTO getTaxRecordByTaxId(Long taxId); 
     
-    // Bulk validation for entity tax history
-    List<TaxResponseDTO> verifyTaxRecordsByEntity(Long entityId, TaxStatus newStatus); 
+    List<TaxResponseDTO> getAllTaxRecordsByEntityId(Long entityId);
     
+
     // Officer: Validate payment and notify user of success
-    TaxResponseDTO verifySingleTaxRecord(Long taxId, TaxStatus newStatus); 
+    TaxResponseDTO verifyTaxRecordByTaxId(Long taxId, TaxStatus newStatus); 
     
     // Dashboard: Aggregate fiscal statistics
     TaxStatsDTO getTaxStatistics();

@@ -33,6 +33,11 @@ public class TaxationController {
         // Returns list of all tax entries for government audit
         return ResponseEntity.ok(taxationService.getAllTaxRecords());
     }
+    
+    @GetMapping("/taxrecords/entity/{entityId}")
+    public ResponseEntity<List<TaxResponseDTO>> getTaxRecordsByEntityId(@PathVariable("entityId") Long entityId){
+    	return ResponseEntity.ok(taxationService.getAllTaxRecordsByEntityId(entityId));
+    }
 
     @GetMapping("/tax/summary")
     public ResponseEntity<TaxStatsDTO> getTaxStatistics() {
@@ -40,15 +45,10 @@ public class TaxationController {
         return ResponseEntity.ok(taxationService.getTaxStatistics());
     }
 
-    @PatchMapping("/taxrecords/entity/{entityId}/verify")
-    public ResponseEntity<List<TaxResponseDTO>> verifyEntityTaxes(@PathVariable Long entityId, @RequestParam TaxStatus status) {
-        // Updates multiple records for one entity ID
-        return ResponseEntity.ok(taxationService.verifyTaxRecordsByEntity(entityId, status));
-    }
 
     @PatchMapping("/taxrecords/{taxId}/verify")
     public ResponseEntity<TaxResponseDTO> verifySingleTax(@PathVariable Long taxId, @RequestParam TaxStatus status) {
         // Approves or rejects a single record by a financial officer
-        return ResponseEntity.ok(taxationService.verifySingleTaxRecord(taxId, status));
+        return ResponseEntity.ok(taxationService.verifyTaxRecordByTaxId(taxId, status));
     }
 }

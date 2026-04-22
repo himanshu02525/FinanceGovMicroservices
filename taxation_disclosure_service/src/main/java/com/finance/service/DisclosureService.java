@@ -7,17 +7,17 @@ import com.finance.enums.DisclosureStatus;
 
 public interface DisclosureService {
     // Process filing with notification context
-    DisclosureResponseDTO processDisclosure(DisclosureCreateRequestDTO request);
+    DisclosureResponseDTO createDisclosure(DisclosureCreateRequestDTO request);
     
     // Admin: Retrieve all disclosure records
     List<DisclosureResponseDTO> getAllDisclosures();
     
+    List<DisclosureResponseDTO> getAllDisclosuresByEntityId(Long entityId);
+    
     // Retrieve single disclosure by ID
     DisclosureResponseDTO getDisclosureByDisclosureId(Long disclosureId);
     
-    // Bulk status update for entity compliance
-    List<DisclosureResponseDTO> validateDisclosuresByEntity(Long entityId, DisclosureStatus newStatus);
-    
+
     // Officer: Validate single record with notification feedback
     DisclosureResponseDTO validateSingleDisclosure(Long disclosureId, DisclosureStatus newStatus);
 }

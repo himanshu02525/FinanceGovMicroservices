@@ -52,7 +52,7 @@ public class SecurityConfig {
 
 						/* ================= PUBLIC ================= */
 
-						.requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/**","/actuator/**").permitAll()
+						.requestMatchers("/api/auth/**", "/swagger-ui/**", "/api/v3/**","/actuator/health","/actuator/info").permitAll()
 
 						/* ================= COMPLIANCE ================= */
 

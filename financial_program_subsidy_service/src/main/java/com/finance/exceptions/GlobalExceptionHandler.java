@@ -1,5 +1,6 @@
 package com.finance.exceptions;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,12 +21,12 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(ProgramNotFoundException.class)
 	public ResponseEntity<Map<String, Object>> handleProgramNotFound(ProgramNotFoundException ex) {
-		Map<String, Object> error = new HashMap<>();
-		error.put("timestamp", LocalDateTime.now());
-		error.put("status", HttpStatus.NOT_FOUND.value());
-		error.put("error", "Program Not Found");
-		error.put("message", ex.getMessage());
-		return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);  //HTTP 404
+	    Map<String, Object> error = new HashMap<>();
+	    error.put("timestamp", Instant.now());
+	    error.put("status", HttpStatus.NOT_FOUND.value());
+	    error.put("error", "Program Not Found");
+	    error.put("message", ex.getMessage());
+	    return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
 	}
 
 	@ExceptionHandler(ConstraintViolationException.class)

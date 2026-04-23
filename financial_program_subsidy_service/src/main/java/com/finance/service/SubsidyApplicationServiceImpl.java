@@ -22,9 +22,11 @@ import com.finance.repository.FinancialProgramRepository;
 import com.finance.repository.SubsidyApplicationRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SubsidyApplicationServiceImpl implements SubsidyApplicationService {
 
     private final FinancialProgramRepository programRepository;
@@ -39,6 +41,7 @@ public class SubsidyApplicationServiceImpl implements SubsidyApplicationService 
     public SubsidyApplicationResponse saveApplication(SubsidyApplicationRequest request) {
         // Validate citizen externally
         Boolean isValid = citizenClient.validateCitizen(request.getEntityId());
+        
         if (!isValid) {
             throw new IllegalStateException("Citizen entity is not valid.");
         }
@@ -56,13 +59,15 @@ public class SubsidyApplicationServiceImpl implements SubsidyApplicationService 
         app.setProgram(program);
         app.setEntityId(request.getEntityId());
 
-     // After saving the application
+        // After saving the application
         SubsidyApplication saved = applicationRepository.save(app);
 
         // ✅ Fetch user details
         UserDto user = userFeignClient.getUserById(request.getUserId());
+        log.info("User Info"+user.getUserId());
+//        String email = "hmcreationhimanshu011@gmail.com";
         String email = user.getEmail();
-        Long id = user.getUserId();
+          Long id = user.getUserId();
 
         // ✅ Trigger notification
         NotificationRequestDto notification = NotificationRequestDto.builder()

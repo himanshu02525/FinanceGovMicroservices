@@ -9,7 +9,7 @@ import com.finance.dto.UserDto;
 /**
  * Feign client for Identity/User microservice.
  */
-@FeignClient(name = "identity-service")
+@FeignClient(name = "identity-access-service")
 public interface UserFeignClient {
 
 	/**

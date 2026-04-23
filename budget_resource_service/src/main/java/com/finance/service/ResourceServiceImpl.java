@@ -99,7 +99,14 @@ public class ResourceServiceImpl implements ResourceService {
 
 	@Override
 	public String deleteResource(Long resourceId) {
-		resourceRepository.deleteById(resourceId);
-		return "Resource deleted successfully";
+
+	    if (!resourceRepository.existsById(resourceId)) {
+	        throw new ResourceNotFoundException(
+	                "Resource allocation not found with id: " + resourceId
+	        );
+	    }
+
+	    resourceRepository.deleteById(resourceId);
+	    return "Resource deleted successfully";
 	}
 }

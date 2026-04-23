@@ -59,7 +59,7 @@ public class DisclosureServiceImpl implements DisclosureService {
         Disclosure saved = disclosureRepository.save(disclosure); 
         
         // 3. INLINE NOTIFICATION: Submission
-        try {
+        try{
             UserDto user = userFeignClient.getUserById(saved.getEntityId());
             if (user != null && user.getEmail() != null) {
                 NotificationRequestDto notification = NotificationRequestDto.builder()

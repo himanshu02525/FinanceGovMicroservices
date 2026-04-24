@@ -10,31 +10,31 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/taxation")
+@RequestMapping("/api/taxation")
 @RequiredArgsConstructor
 public class TaxationController {
 
     private final TaxationService taxationService;
 
-    @PostMapping("/enter_taxrecord")
+    @PostMapping("/enter_taxrecord")//citizen
     public ResponseEntity<TaxResponseDTO> createTaxRecord(@Valid @RequestBody TaxRequestDTO request) {
         // Triggers creation logic and catches validation errors via GlobalExceptionHandler
         return ResponseEntity.ok(taxationService.createTaxRecord(request));
     }
 
-    @GetMapping("/taxrecords/{taxId}")
+    @GetMapping("/taxrecords/{taxId}")//financial officer, citizen
     public ResponseEntity<TaxResponseDTO> getTaxRecordByTaxId(@PathVariable Long taxId) {
         // Returns 200 OK or 404 via custom exception
         return ResponseEntity.ok(taxationService.getTaxRecordByTaxId(taxId));
     }
 
-    @GetMapping("/all_taxrecords")
+    @GetMapping("/all_taxrecords")//financial officer, admin
     public ResponseEntity<List<TaxResponseDTO>> getAllRecords() {
         // Returns list of all tax entries for government audit
         return ResponseEntity.ok(taxationService.getAllTaxRecords());
     }
     
-    @GetMapping("/taxrecords/entity/{entityId}")
+    @GetMapping("/taxrecords/entity/{entityId}")//financial officer, citizen
     public ResponseEntity<List<TaxResponseDTO>> getTaxRecordsByEntityId(@PathVariable("entityId") Long entityId){
     	return ResponseEntity.ok(taxationService.getAllTaxRecordsByEntityId(entityId));
     }
@@ -46,7 +46,7 @@ public class TaxationController {
     }
 
 
-    @PatchMapping("/taxrecords/{taxId}/verify")
+    @PatchMapping("/taxrecords/verify/{taxId}")//financial officer
     public ResponseEntity<TaxResponseDTO> verifySingleTax(@PathVariable Long taxId, @RequestParam TaxStatus status) {
         // Approves or rejects a single record by a financial officer
         return ResponseEntity.ok(taxationService.verifyTaxRecordByTaxId(taxId, status));

@@ -3,15 +3,17 @@ package com.finance.dto;
 import java.time.LocalDateTime;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
+//github.com/himanshu02525/FinanceGovMicroservices.git
 import com.finance.enums.ReportScope;
-import lombok.*;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@JsonInclude(value = Include.NON_NULL)
+
 public class ReportResponseDTO {
 
     private Long reportId;

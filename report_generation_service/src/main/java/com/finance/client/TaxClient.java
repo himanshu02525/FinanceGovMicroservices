@@ -8,6 +8,6 @@ import java.util.Map;
 @FeignClient(name = "taxation-disclosure-service")
 public interface TaxClient {
 
-	@GetMapping("/taxation/tax/summary")
+	@GetMapping("/api/taxation/tax/summary")
 	Map<String, Object> getTaxStatistics();
 }

@@ -15,8 +15,8 @@ public interface DisclosureService {
     // Retrieve single disclosure by ID
     DisclosureResponseDTO getDisclosureByDisclosureId(Long disclosureId);
     
-    // Bulk status update for entity compliance
-    List<DisclosureResponseDTO> validateDisclosuresByEntity(Long entityId, DisclosureStatus newStatus);
+    
+    List<DisclosureResponseDTO> getAllDisclosuresByEntityId(Long entityId);
     
     // Officer: Validate single record with notification feedback
     DisclosureResponseDTO validateSingleDisclosure(Long disclosureId, DisclosureStatus newStatus);

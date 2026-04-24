@@ -172,7 +172,7 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 	public ComplianceResponse create(ComplianceCreateRequest request) {
 
 		if (Boolean.FALSE.equals(entityFeignClient.validateEntity(request.getEntityId()))) {
-
+			 log.warn("valid entity");
 			throw new EntityNotFoundException(
 					messageUtil.getMessage(NOT_FOUND_MESSAGE, "Entity", request.getEntityId()));
 		}
@@ -181,12 +181,7 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 
 		ComplianceRecord saved = repository.save(modelMapper.map(request, ComplianceRecord.class));
 
-		NotificationRequestDto notification = NotificationRequestDto.builder().userId(saved.getEntityId())
-				.entityId(saved.getEntityId()).category(NotificationCategory.COMPLIANCE)
-				.message(messageUtil.getMessage("create.message", COMPLIANCE, saved.getComplianceId())).build();
-
-		notificationFeignClient.sendNotification(notification, "complianceOfficer@gmail.com");
-
+		
 		return modelMapper.map(saved, ComplianceResponse.class);
 	}
 

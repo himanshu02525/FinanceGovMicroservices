@@ -1,5 +1,6 @@
 package com.finance.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -106,10 +107,10 @@ public class SubsidyServiceImpl implements SubsidyService {
 				subsidy.getDate(), subsidy.getStatus().name(), subsidy.getProgram().getProgramId());
 	}
 
-//    @Override
-//    public BigDecimal getApprovedAmountByProgram(Long programId) {
-//        return subsidyRepository.sumApprovedAmountByProgramId(programId);
-//    }
+    @Override
+    public BigDecimal getApprovedAmountByProgram(Long programId) {
+        return subsidyRepository.sumApprovedAmountByProgramId(programId);
+    }
 
 	public long getApprovedSubsidies(Long programId) {
 		return subsidyRepository.countByProgramProgramIdAndStatus(programId, SubsidyStatus.GRANTED);
@@ -124,24 +125,4 @@ public class SubsidyServiceImpl implements SubsidyService {
 		return summary;
 	}
 
-//    @Override
-//    public SubsidyResponse approveSubsidy(Long subsidyId, Long userId, String email) {
-//        Subsidy subsidy = subsidyRepository.findById(subsidyId)
-//                .orElseThrow(() -> new IllegalArgumentException("Subsidy not found"));
-//
-//        subsidy.setStatus(SubsidyStatus.GRANTED);
-//        subsidyRepository.save(subsidy);
-//
-//        // ✅ Trigger notification
-//        NotificationRequestDto notification = NotificationRequestDto.builder()
-//                .userId(userId)
-//                .entityId(subsidy.getEntityId())
-//                .message("Your subsidy has been approved. Amount: " + subsidy.getAmount())
-//                .category(NotificationCategory.SUBSIDY)
-//                .build();
-//
-//        notificationFeignClient.sendNotification(notification, email);
-//
-//        return toResponse(subsidy);
-//    }
 }

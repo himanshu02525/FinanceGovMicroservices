@@ -2,17 +2,17 @@ package com.finance.repository;
 
 import java.util.List;
 import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+
 import com.finance.model.TaxRecord;
 
 @Repository
 public interface TaxRepository extends JpaRepository<TaxRecord, Long> {
 
-    // Finds all tax records associated with a specific entity ID (Citizen or Business)
-    List<TaxRecord> findByEntityId(Long entityId);
-
+   
     // Optimized: Primary Key lookup should return a single Optional record
     Optional<TaxRecord> findByTaxId(Long taxId);
 
@@ -24,12 +24,10 @@ public interface TaxRepository extends JpaRepository<TaxRecord, Long> {
 
     // --- AGGREGATION QUERIES FOR STATISTICS ---
 
-    // Counts unique entity IDs to determine the total number of distinct taxpayers
     @Query("SELECT COUNT(DISTINCT t.entityId) FROM TaxRecord t")
-    long countTotalTaxPayers();
-
-    // Sums the 'amount' column across all records to calculate total revenue
-    // Returns Double to handle cases where the table might be empty (returns null)
-    @Query("SELECT SUM(t.amount) FROM TaxRecord t")
+    Integer countTotalTaxPayers();
+ 
+    @Query("SELECT COALESCE(SUM(t.amount), 0.0) FROM TaxRecord t WHERE t.status = com.finance.enums.TaxStatus.PAID")
     Double calculateTotalRevenue();
+    List<TaxRecord> findByEntityId(Long entityId);
 }

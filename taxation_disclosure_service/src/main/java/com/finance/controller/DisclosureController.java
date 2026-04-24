@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/disclosure") 
+@RequestMapping("/api/disclosure") 
 public class DisclosureController {
 
     private static final Logger logger = LoggerFactory.getLogger(DisclosureController.class); 
@@ -41,13 +41,11 @@ public class DisclosureController {
         return ResponseEntity.ok(disclosureService.getDisclosureByDisclosureId(disclosureId)); 
     }
 
-    @PatchMapping("/{entityId}/validate-disclosure")
-    public ResponseEntity<List<DisclosureResponseDTO>> validateEntityDisclosures(
-            @PathVariable("entityId") Long entityId,
-            @RequestParam("status") DisclosureStatus status) {
-        // Allows bulk status updates for all disclosures belonging to a specific entity
-        logger.info("REST request: Bulk validating disclosures for Entity ID: {}", entityId); 
-        return ResponseEntity.ok(disclosureService.validateDisclosuresByEntity(entityId, status)); 
+    @GetMapping("/entity/{entityId}")
+    public ResponseEntity<List<DisclosureResponseDTO>> getDisclosureByEntityId(@PathVariable("entityId") Long entityId){
+    	  // Fetches the specific details of  disclosures using its entity ID
+        logger.info("REST request to fetch entity ID: {}", entityId);
+        return ResponseEntity.ok(disclosureService.getAllDisclosuresByEntityId(entityId));
     }
 
     @PatchMapping("/{disclosureId}/validate")

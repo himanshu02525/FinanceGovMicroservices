@@ -12,7 +12,7 @@ import com.finance.dto.FinancialProgramResponseDTO;
 public interface FinancialProgramClient {
 
 	@GetMapping("/programs/fetch/{programId}")
-	FinancialProgramResponseDTO getProgramById(@PathVariable("programId") Long programId);
+	FinancialProgramResponseDTO getProgramById(@PathVariable Long programId);
 
 	@GetMapping("/subsidies/approved_sum/{programId}")
 	BigDecimal getApprovedAmount(@PathVariable("programId") Long programId);

@@ -1,4 +1,3 @@
-
 package com.finance.config;
 
 import com.finance.repository.TokenRepository;
@@ -50,12 +49,16 @@ public class JwtFilter extends OncePerRequestFilter {
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
             
-            // Check if token is present, not expired, and not revoked in our DB
+            // 1. Check if token is present, not expired, and not revoked in our DB
             var isTokenValidInDb = tokenRepository.findByToken(jwt)
                     .map(t -> !t.isExpired() && !t.isRevoked())
                     .orElse(false);
 
-            if (jwtService.isTokenValid(jwt, userDetails) && isTokenValidInDb) {
+            // 2. Comprehensive validation with logging
+            boolean isJwtValid = jwtService.isTokenValid(jwt, userDetails);
+
+            if (isJwtValid && isTokenValidInDb) {
+                log.info("Authentication Successful for user: {}", userEmail);
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
@@ -63,10 +66,12 @@ public class JwtFilter extends OncePerRequestFilter {
                 );
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+            } else {
+                // 3. This log will tell you exactly why you are getting a 403
+                log.warn("Authentication Failed for {}. JWT Service Valid: {}, DB Token Valid: {}", 
+                         userEmail, isJwtValid, isTokenValidInDb);
             }
         }
         filterChain.doFilter(request, response);
     }
 }
-
-

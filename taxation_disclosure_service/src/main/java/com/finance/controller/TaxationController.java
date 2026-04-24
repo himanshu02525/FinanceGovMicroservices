@@ -1,16 +1,28 @@
 package com.finance.controller;
 
 import java.util.List;
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import com.finance.dto.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.finance.dto.TaxRequestDTO;
+import com.finance.dto.TaxResponseDTO;
 import com.finance.enums.TaxStatus;
 import com.finance.service.TaxationService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/taxation")
+@RequestMapping("/api/taxation")
 @RequiredArgsConstructor
 public class TaxationController {
 
@@ -35,18 +47,17 @@ public class TaxationController {
     }
 
     @GetMapping("/tax/summary")
-    public ResponseEntity<TaxStatsDTO> getTaxStatistics() {
+    public ResponseEntity<Map<String, Object>> getTaxStatistics() {
         // Provides aggregated fiscal data for management oversight
         return ResponseEntity.ok(taxationService.getTaxStatistics());
     }
 
-    @PatchMapping("/taxrecords/entity/{entityId}/verify")
-    public ResponseEntity<List<TaxResponseDTO>> verifyEntityTaxes(@PathVariable Long entityId, @RequestParam TaxStatus status) {
-        // Updates multiple records for one entity ID
-        return ResponseEntity.ok(taxationService.verifyTaxRecordsByEntity(entityId, status));
+    @GetMapping("/taxrecords/entity/{entityId}")
+    public ResponseEntity<List<TaxResponseDTO>> getTaxRecordsByEntityId(@PathVariable("entityId") Long entityId){
+    	return ResponseEntity.ok(taxationService.getAllTaxRecordsByEntityId(entityId));
     }
 
-    @PatchMapping("/taxrecords/{taxId}/verify")
+    @PatchMapping("/taxrecords/verify/{taxId}")
     public ResponseEntity<TaxResponseDTO> verifySingleTax(@PathVariable Long taxId, @RequestParam TaxStatus status) {
         // Approves or rejects a single record by a financial officer
         return ResponseEntity.ok(taxationService.verifySingleTaxRecord(taxId, status));

@@ -19,19 +19,15 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        // Fetch the user from the database
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Access Denied: No account associated with " + email));
 
-        // 1. Extract the role name from our Enum
+        // 1. Get the role name from the database (it is already "ROLE_ADMIN")
         String roleName = user.getRole().getRoleName().name();
 
-        // 2. Map the role to a GrantedAuthority. 
-        // Spring Security uses these "Authorities" to decide if a user can access an endpoint.
+        // 2. Remove the "ROLE_" prefix here to avoid "ROLE_ROLE_ADMIN"
         SimpleGrantedAuthority authority = new SimpleGrantedAuthority(roleName);
 
-        // 3. We return Spring's built-in User object.
-        // It handles the password comparison behind the scenes using the BCryptPasswordEncoder.
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(), 
                 user.getPassword(),

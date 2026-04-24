@@ -36,7 +36,6 @@ public class UserController {
     // GET USER BY ID (SAFE DTO)
     // =============================
     @GetMapping("/getuserbyid/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'COMPLIANCE_OFFICER')")
     public ResponseEntity<UserResponseDto> getUserById(@PathVariable Long id) {
         log.info("Fetching user DTO for ID: {}", id);
         return ResponseEntity.ok(userService.getUserById(id));

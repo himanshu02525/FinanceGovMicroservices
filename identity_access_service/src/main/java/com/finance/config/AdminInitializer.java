@@ -1,6 +1,5 @@
 package com.finance.config;
 
-
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,40 +18,66 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class AdminInitializer implements CommandLineRunner {
 
-    private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
-    private final PasswordEncoder passwordEncoder;
+	private final UserRepository userRepository;
+	private final RoleRepository roleRepository;
+	private final PasswordEncoder passwordEncoder;
 
-    @Override
-    public void run(String... args) {
+	@Override
+	public void run(String... args) {
 
-        String adminEmail = "admin@financegov.com";
+		/*
+		 * =============================== ✅ STEP 1: CREATE ROLES AT STARTUP
+		 * ===============================
+		 */
 
-        // If admin already exists → skip creation
-        if (userRepository.existsByEmail(adminEmail)) {
-            log.info("Admin already exists. Skipping creation.");
-            return;
-        }
+		for (RoleType role : RoleType.values()) {
+			createRoleIfNotExists(role);
+		}
 
-        // Fetch ROLE_ADMIN
-        Role adminRole = roleRepository.findByRoleName(RoleType.ROLE_ADMIN)
-                .orElseThrow(() -> new RuntimeException("ROLE_ADMIN missing in database"));
+		/*
+		 * =============================== ✅ STEP 2: CREATE ADMIN USER
+		 * ===============================
+		 */
 
-        // Create Admin User
-        User admin = new User();
-        admin.setUsername("Admin");
-        admin.setEmail(adminEmail);
-        admin.setPhone("9146237978"); // Customize admin contact
-        admin.setPassword(passwordEncoder.encode("Admin@1234"));  // RAW password, hashed by BCrypt
-        admin.setRole(adminRole);
-        admin.setStatus("ACTIVE");
-        admin.setVerified(true);
+		String adminEmail = "admin@financegov.com";
 
-        // Save in DB
-        userRepository.save(admin);
+		// If admin already exists → skip creation
+		if (userRepository.existsByEmail(adminEmail)) {
+			log.info("Admin already exists. Skipping creation.");
+			return;
+		}
 
-        log.info("ADMIN CREATED SUCCESSFULLY!");
-        log.info("Email: " + adminEmail);
-        log.info("Password: Admin@1234");
-    }
+		// Fetch ROLE_ADMIN (now guaranteed to exist)
+		Role adminRole = roleRepository.findByRoleName(RoleType.ROLE_ADMIN)
+				.orElseThrow(() -> new RuntimeException("ROLE_ADMIN missing in database"));
+
+		// Create Admin User
+		User admin = new User();
+		admin.setUsername("Admin");
+		admin.setEmail(adminEmail);
+		admin.setPhone("9146237978");
+		admin.setPassword(passwordEncoder.encode("Admin@1234"));
+		admin.setRole(adminRole);
+		admin.setStatus("ACTIVE");
+		admin.setVerified(true);
+
+		userRepository.save(admin);
+
+		log.info("✅ ADMIN CREATED SUCCESSFULLY!");
+		log.info("Email: {}", adminEmail);
+		log.info("Password: Admin@1234 (change after first login)");
+	}
+
+	/*
+	 * =============================== ✅ HELPER METHOD
+	 * ===============================
+	 */
+
+	private void createRoleIfNotExists(RoleType roleType) {
+		roleRepository.findByRoleName(roleType).ifPresentOrElse(role -> log.info("Role {} already exists", roleType),
+				() -> {
+					roleRepository.save(new Role(roleType));
+					log.info("✅ Role {} created", roleType);
+				});
+	}
 }

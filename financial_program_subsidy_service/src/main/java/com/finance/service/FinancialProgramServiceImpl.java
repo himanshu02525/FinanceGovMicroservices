@@ -26,7 +26,6 @@ import lombok.extern.slf4j.Slf4j;
 public class FinancialProgramServiceImpl implements FinancialProgramService {
 
     private final FinancialProgramRepository repository;
-    private final SubsidyRepository subsidyRepository;
 
     @Override
     @Transactional

@@ -118,8 +118,20 @@ public class UserServiceImpl implements UserService {
     @Override
     public String createOfficer(UserCreationRequest request) {
 
+        // 1. Check Email
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Creation failed: Email already registered.");
+            throw new IllegalArgumentException("Creation failed: Email already registered.");
+        }
+
+        // 2. Check Username (Username is UNIQUE in your User model)
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new IllegalArgumentException("Creation failed: Username already taken.");
+        }
+
+        // 3. Check Phone (Phone is UNIQUE in your User model)
+        // Note: You may need to add 'boolean existsByPhone(String phone);' to your UserRepository
+        if (userRepository.existsByPhone(request.getPhone())) {
+            throw new IllegalArgumentException("Creation failed: Phone number already registered.");
         }
 
         RoleType roleType = RoleType.valueOf(request.getRole());
@@ -129,6 +141,7 @@ public class UserServiceImpl implements UserService {
         User user = new User();
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
+        user.setPhone(request.getPhone()); // <--- YOU WERE MISSING THIS LINE
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(role);
         user.setVerified(true);

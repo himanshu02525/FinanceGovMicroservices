@@ -1,5 +1,6 @@
 package com.finance.service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -14,7 +15,7 @@ public interface SubsidyService {
     List<SubsidyResponse> getSubsidiesByEntity(Long entityId);
 //    SubsidyResponse updateSubsidyStatus(Long subsidyId, String status);
     SubsidyResponse getSubsidyById(Long subsidyId);
-//    BigDecimal getApprovedAmountByProgram(Long programId);
+    BigDecimal getApprovedAmountByProgram(Long programId);
     
     long getApprovedSubsidies(Long programId);
     Map<String, Object> getSubsidySummary();

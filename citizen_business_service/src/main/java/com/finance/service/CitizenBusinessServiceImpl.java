@@ -53,7 +53,8 @@ public class CitizenBusinessServiceImpl implements CitizenBusinessService {
 		CitizenBusiness saved = repository.save(citizen);
 		log.info("Citizen/Business created with entityId={}", saved.getEntityId());
 
-		// 🔔 Notification: Program Application Submitted
+      // Notification: Program Application Submitted
+		
 		UserDto user = userFeignClient.getUserById(request.getUserId());
 
 		NotificationRequestDto notification = NotificationRequestDto.builder().userId(user.getUserId())

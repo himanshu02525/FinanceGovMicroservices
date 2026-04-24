@@ -1,9 +1,10 @@
 package com.finance.service;
 
 import java.util.List;
+import java.util.Map;
+
 import com.finance.dto.TaxRequestDTO;
 import com.finance.dto.TaxResponseDTO;
-import com.finance.dto.TaxStatsDTO;
 import com.finance.enums.TaxStatus;
 
 public interface TaxationService {
@@ -23,5 +24,5 @@ public interface TaxationService {
     TaxResponseDTO verifyTaxRecordByTaxId(Long taxId, TaxStatus newStatus); 
     
     // Dashboard: Aggregate fiscal statistics
-    TaxStatsDTO getTaxStatistics();
+    Map<String, Object> getTaxStatistics();
 }

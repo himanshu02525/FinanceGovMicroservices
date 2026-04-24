@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import com.finance.dto.UserDto;
 
-@FeignClient(name = "identity-service")
+@FeignClient(name = "identity-access-service")
 public interface UserFeignClient {
 	/**
 	 * Fetch a single user by ID from Identity Service

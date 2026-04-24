@@ -1,9 +1,13 @@
 package com.finance.exceptions;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
-import lombok.extern.slf4j.Slf4j;
-
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,45 +17,59 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-@ControllerAdvice
+@RestControllerAdvice
 @Slf4j
-public class GlobalExceptionHandler implements AuthenticationEntryPoint, AccessDeniedHandler {
+@Order(Ordered.HIGHEST_PRECEDENCE)
+public class GlobalExceptionHandler
+        implements AuthenticationEntryPoint, AccessDeniedHandler {
+
+    private final ObjectMapper objectMapper;
+
+    public GlobalExceptionHandler(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
 
     /* ===============================
-       COMMON JSON WRITER
+       COMMON SECURITY JSON WRITER
        =============================== */
-    private void writeSecurityError(HttpServletResponse response, HttpStatus status, String message)
-            throws IOException {
+    private void writeSecurityError(
+            HttpServletResponse response,
+            HttpStatus status,
+            String message
+    ) throws IOException {
 
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("timestamp", LocalDateTime.now());
+        body.put("timestamp", Instant.now());
         body.put("status", status.value());
         body.put("error", status.getReasonPhrase());
         body.put("message", message);
 
         response.setStatus(status.value());
         response.setContentType("application/json");
-        new ObjectMapper().writeValue(response.getWriter(), body);
+        response.setCharacterEncoding("UTF-8");
+
+        objectMapper.writeValue(response.getWriter(), body);
+        response.getWriter().flush();
     }
 
     /* ===============================
        401 — UNAUTHORIZED
        =============================== */
     @Override
-    public void commence(HttpServletRequest request, HttpServletResponse response,
-                         AuthenticationException authException) throws IOException {
+    public void commence(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            AuthenticationException authException
+    ) throws IOException {
 
         log.warn("Authentication failed: {}", authException.getMessage());
 
@@ -66,8 +84,11 @@ public class GlobalExceptionHandler implements AuthenticationEntryPoint, AccessD
        403 — FORBIDDEN
        =============================== */
     @Override
-    public void handle(HttpServletRequest request, HttpServletResponse response,
-                       AccessDeniedException ex) throws IOException {
+    public void handle(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            AccessDeniedException ex
+    ) throws IOException {
 
         log.warn("Access denied: {}", ex.getMessage());
 
@@ -101,7 +122,8 @@ public class GlobalExceptionHandler implements AuthenticationEntryPoint, AccessD
        VALIDATION ERRORS
        =============================== */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Object> handleValidationExceptions(MethodArgumentNotValidException ex) {
+    public ResponseEntity<Object> handleValidationExceptions(
+            MethodArgumentNotValidException ex) {
 
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getFieldErrors()
@@ -110,8 +132,9 @@ public class GlobalExceptionHandler implements AuthenticationEntryPoint, AccessD
                 );
 
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("timestamp", LocalDateTime.now());
+        body.put("timestamp", Instant.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Bad Request");
         body.put("message", "Validation failed");
         body.put("errors", errors);
 
@@ -119,24 +142,26 @@ public class GlobalExceptionHandler implements AuthenticationEntryPoint, AccessD
     }
 
     /* ===============================
-       DUPLICATE / DB CONSTRAINT ERRORS
+       DB CONSTRAINT ERRORS
        =============================== */
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<Object> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+    public ResponseEntity<Object> handleDataIntegrityViolation(
+            DataIntegrityViolationException ex) {
 
         log.warn("Database constraint violation", ex);
 
         return buildResponse(
-                "Duplicate value detected. Please use unique username, email, or phone number.",
+                "Duplicate value detected. Please use unique data.",
                 HttpStatus.BAD_REQUEST
         );
     }
 
     /* ===============================
-       BUSINESS LOGIC ERRORS
+       BUSINESS ERRORS
        =============================== */
-    @ExceptionHandler({ IllegalArgumentException.class, RuntimeException.class })
-    public ResponseEntity<Object> handleBusinessExceptions(RuntimeException ex) {
+    @ExceptionHandler({ IllegalArgumentException.class })
+    public ResponseEntity<Object> handleBusinessExceptions(
+            RuntimeException ex) {
 
         log.warn("Business rule violation: {}", ex.getMessage());
 
@@ -147,7 +172,7 @@ public class GlobalExceptionHandler implements AuthenticationEntryPoint, AccessD
     }
 
     /* ===============================
-       FALLBACK — TRUE 500 ERROR
+       TRUE 500 ERROR
        =============================== */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> handleAllUnhandled(Exception ex) {
@@ -163,11 +188,14 @@ public class GlobalExceptionHandler implements AuthenticationEntryPoint, AccessD
     /* ===============================
        RESPONSE BUILDER
        =============================== */
-    private ResponseEntity<Object> buildResponse(String message, HttpStatus status) {
+    private ResponseEntity<Object> buildResponse(
+            String message,
+            HttpStatus status) {
 
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("timestamp", LocalDateTime.now());
+        body.put("timestamp", Instant.now());
         body.put("status", status.value());
+        body.put("error", status.getReasonPhrase());
         body.put("message", message);
 
         return new ResponseEntity<>(body, status);

@@ -1,5 +1,6 @@
 package com.finance.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -140,6 +141,10 @@ public class SubsidyServiceImpl implements SubsidyService {
 	}
 
 
+    @Override
+    public BigDecimal getApprovedAmountByProgram(Long programId) {
+        return subsidyRepository.sumApprovedAmountByProgramId(programId);
+    }
 
 	public long getApprovedSubsidies(Long programId) {
 		return subsidyRepository.countByProgramProgramIdAndStatus(programId, SubsidyStatus.GRANTED);

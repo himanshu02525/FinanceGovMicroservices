@@ -15,7 +15,6 @@ import com.finance.enums.ProgramStatus;
 import com.finance.exceptions.ProgramNotFoundException;
 import com.finance.model.FinancialProgram;
 import com.finance.repository.FinancialProgramRepository;
-import com.finance.repository.SubsidyRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

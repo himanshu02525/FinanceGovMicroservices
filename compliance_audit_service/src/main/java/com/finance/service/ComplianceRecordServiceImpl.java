@@ -10,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.finance.client.EntityFeignClient;
-import com.finance.client.NotificationFeignClient;
 import com.finance.client.ProgramSubsidyFeignClient;
 import com.finance.client.TaxFeignClient;
 import com.finance.dto.ComplianceCreateRequest;
@@ -60,7 +59,6 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 	private final ProgramSubsidyFeignClient programSubsidyFeignClient;
 	private final TaxFeignClient taxFeignClient;
 	private final EntityFeignClient entityFeignClient;
-	private final NotificationFeignClient notificationFeignClient;
 
 	/* ================= FEIGN RESPONSE VALIDATION ================= */
 	private <T> T validateFeignResponse(ResponseEntity<T> response, String resourceName, long referenceId) {

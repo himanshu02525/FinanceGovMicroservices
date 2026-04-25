@@ -10,6 +10,6 @@ import com.finance.dto.UserResponseDto;
 @FeignClient(name = "identity-access-service")
 public interface UserFeignClient {
 
-	@GetMapping("officer/fetch/{entityId}")
+	@GetMapping("api/users/getuserbyid/{officerId}")
 	ResponseEntity<UserResponseDto> getOfficerById(@PathVariable Long officerId);
 }

@@ -121,13 +121,13 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(feign.FeignException.class)
 	public ResponseEntity<ExceptionResponse> handleFeignError(feign.FeignException ex) {
 
-		String messageKey;
+		String messageKey="default";
 
-		if (ex.status() == 404) {
-			messageKey = "external.service.not.found";
-		} else {
-			messageKey = "external.service.unavailable";
-		}
+//		if (ex.status() == 404) {
+//			messageKey = "external.service.not.found";
+//		} else {
+//			messageKey = "external.service.unavailable";
+//		}
 
 		String message = messageUtil.getMessage(messageKey);
 

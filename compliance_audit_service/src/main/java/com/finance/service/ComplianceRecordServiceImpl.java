@@ -17,12 +17,10 @@ import com.finance.dto.ComplianceCreateRequest;
 import com.finance.dto.ComplianceResponse;
 import com.finance.dto.ComplianceUpdateRequest;
 import com.finance.dto.FinancialProgramResponse;
-import com.finance.dto.NotificationRequestDto;
 import com.finance.dto.SubsidyResponse;
 import com.finance.dto.TaxResponseDTO;
 import com.finance.enums.ComplianceRecordResult;
 import com.finance.enums.ComplianceRecordType;
-import com.finance.enums.NotificationCategory;
 import com.finance.exceptions.AuditStatusConflictException;
 import com.finance.exceptions.ComplianceNotFoundException;
 import com.finance.exceptions.ComplianceStatusConflictException;
@@ -176,7 +174,7 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 	public ComplianceResponse create(ComplianceCreateRequest request) {
 
 		if (Boolean.FALSE.equals(entityFeignClient.validateEntity(request.getEntityId()))) {
-
+			log.warn("valid entity");
 			throw new EntityNotFoundException(
 					messageUtil.getMessage(NOT_FOUND_MESSAGE, "Entity", request.getEntityId()));
 		}
@@ -184,12 +182,6 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 		validateReference(request.getType(), request.getReferenceId());
 
 		ComplianceRecord saved = repository.save(modelMapper.map(request, ComplianceRecord.class));
-
-		NotificationRequestDto notification = NotificationRequestDto.builder().userId(saved.getEntityId())
-				.entityId(saved.getEntityId()).category(NotificationCategory.COMPLIANCE)
-				.message(messageUtil.getMessage("create.message", COMPLIANCE, saved.getComplianceId())).build();
-
-		notificationFeignClient.sendNotification(notification, "complianceOfficer@gmail.com");
 
 		return modelMapper.map(saved, ComplianceResponse.class);
 	}

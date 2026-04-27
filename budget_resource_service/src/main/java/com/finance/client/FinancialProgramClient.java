@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import com.finance.dto.FinancialProgramResponseDTO;
 
-@FeignClient(name = "financial-program-subsidy-service")
+@FeignClient(name = "financial-program-subsidy-service", fallback = FinancialProgramClientFallback.class)
 public interface FinancialProgramClient {
 
 	@GetMapping("/programs/fetch/{programId}")

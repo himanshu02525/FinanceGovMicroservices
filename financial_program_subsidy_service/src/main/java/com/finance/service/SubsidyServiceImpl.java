@@ -40,7 +40,7 @@ public class SubsidyServiceImpl implements SubsidyService {
 	public final UserFeignClient userFeignClient;
 
 	@Override
-	@Transactional
+	
 	public SubsidyResponse saveSubsidy(SubsidyRequest request) {
 		// Validate citizen externally
 		Boolean isValid = citizenClient.validateCitizen(request.getEntityId());

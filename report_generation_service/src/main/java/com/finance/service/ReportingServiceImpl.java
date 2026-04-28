@@ -101,7 +101,96 @@ public class ReportingServiceImpl implements ReportingService {
 
     @Override
     public ReportAnalyticsDTO getAnalytics() {
-        // unchanged – already correct
-        return null;
+
+        // Fetch reports by scope
+        List<Report> programReports =
+                reportRepository.findByScope(ReportScope.PROGRAM);
+
+        List<Report> subsidyReports =
+                reportRepository.findByScope(ReportScope.SUBSIDY);
+
+        List<Report> taxReports =
+                reportRepository.findByScope(ReportScope.TAX);
+
+        // Get latest report per scope
+        Report programReport =
+                programReports.isEmpty() ? null
+                        : programReports.get(programReports.size() - 1);
+
+        Report subsidyReport =
+                subsidyReports.isEmpty() ? null
+                        : subsidyReports.get(subsidyReports.size() - 1);
+
+        Report taxReport =
+                taxReports.isEmpty() ? null
+                        : taxReports.get(taxReports.size() - 1);
+
+        // ================= PROGRAM ANALYTICS =================
+        double programUtilization = 0;
+
+        if (programReport != null &&
+            programReport.getTotalPrograms() != null &&
+            programReport.getTotalPrograms() > 0) {
+
+            programUtilization =
+                    (programReport.getActivePrograms() * 100.0) /
+                            programReport.getTotalPrograms();
+        }
+
+        // ================= SUBSIDY ANALYTICS =================
+        double approvalRate = 0;
+        double avgSubsidy = 0;
+
+        if (subsidyReport != null &&
+            subsidyReport.getApplicationsReceived() != null &&
+            subsidyReport.getApplicationsReceived() > 0) {
+
+            approvalRate =
+                    (subsidyReport.getApprovedSubsidies() * 100.0) /
+                            subsidyReport.getApplicationsReceived();
+
+            if (subsidyReport.getApprovedSubsidies() != null &&
+                subsidyReport.getApprovedSubsidies() > 0 &&
+                subsidyReport.getAmountDistributed() != null) {
+
+                avgSubsidy =
+                        subsidyReport.getAmountDistributed() /
+                                subsidyReport.getApprovedSubsidies();
+            }
+        }
+
+        // ================= TAX ANALYTICS =================
+        double avgRevenue = 0;
+
+        if (taxReport != null &&
+            taxReport.getTotalTaxpayers() != null &&
+            taxReport.getTotalTaxpayers() > 0 &&
+            taxReport.getRevenueCollected() != null) {
+
+            avgRevenue =
+                    taxReport.getRevenueCollected() /
+                            taxReport.getTotalTaxpayers();
+        }
+
+        // ================= RESPONSE =================
+        return new ReportAnalyticsDTO(
+
+                // PROGRAM
+                programReport != null ? programReport.getTotalPrograms() : 0,
+                programReport != null ? programReport.getActivePrograms() : 0,
+                programReport != null ? programReport.getBudgetUsed() : 0,
+                programUtilization,
+
+                // SUBSIDY
+                subsidyReport != null ? subsidyReport.getApplicationsReceived() : 0,
+                subsidyReport != null ? subsidyReport.getApprovedSubsidies() : 0,
+                approvalRate,
+                avgSubsidy,
+
+                // TAX
+                taxReport != null ? taxReport.getTotalTaxpayers() : 0,
+                taxReport != null ? taxReport.getRevenueCollected() : 0,
+                avgRevenue
+        );
     }
 }

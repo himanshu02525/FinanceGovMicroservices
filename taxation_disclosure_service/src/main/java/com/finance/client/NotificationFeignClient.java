@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import com.finance.dto.NotificationRequestDto;
 
-@FeignClient(name = "notification-service")
+@FeignClient(name = "notification-service",fallback = NotificationFeignClientFallback.class)
 public interface NotificationFeignClient {
 
     @PostMapping("/api/notifications/trigger")

@@ -5,9 +5,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * DTO for carrying aggregated tax metrics to the administrative dashboard.
- */
+
+ //DTO for carrying aggregated tax metrics to the administrative dashboard.
+
 @Data
 @Builder
 @AllArgsConstructor

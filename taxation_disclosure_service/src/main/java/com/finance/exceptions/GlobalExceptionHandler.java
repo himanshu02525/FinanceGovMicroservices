@@ -14,7 +14,7 @@ import org.springframework.web.context.request.WebRequest;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-@RestControllerAdvice // Centralized exception handling for the Finance microservices
+@RestControllerAdvice 
 public class GlobalExceptionHandler {
 
 	// 1. Handle Resource Not Found (Generic catch for missing DB entries)
@@ -78,10 +78,9 @@ public class GlobalExceptionHandler {
 		return new ResponseEntity<>(body, status);
 	}
 
-	/**
-	 * Inner class for structured error responses (can be used instead of Map if
-	 * preferred)
-	 */
+	
+	 //Inner class for structured error responses (can be used instead of Map if preferred)
+	 
 	@Data
 	@AllArgsConstructor
 	public static class ErrorResponse {

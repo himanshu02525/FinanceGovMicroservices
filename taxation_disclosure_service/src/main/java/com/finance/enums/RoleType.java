@@ -1,8 +1,7 @@
 package com.finance.enums;
  
-/**
-* Roles as defined in FinanceGov Identity & Access Management module
-*/
+//Roles as defined in FinanceGov Identity & Access Management module
+
 public enum RoleType {
  
     ROLE_CITIZEN,

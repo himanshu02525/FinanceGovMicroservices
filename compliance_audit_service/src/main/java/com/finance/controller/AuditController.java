@@ -55,9 +55,8 @@ public class AuditController {
 	}
 
 	@DeleteMapping("/{id}")
-	public ResponseEntity<Void> delete(@PathVariable long id) {
-		service.delete(id);
-		return ResponseEntity.noContent().build();
+	public ResponseEntity<String> delete(@PathVariable long id) {
+		return ResponseEntity.ok(service.delete(id));
 	}
 
 	@GetMapping("/summary")

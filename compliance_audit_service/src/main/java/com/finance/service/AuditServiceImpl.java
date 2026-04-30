@@ -15,6 +15,7 @@ import com.finance.dto.AuditResponse;
 import com.finance.dto.AuditUpdateRequest;
 import com.finance.dto.UserResponseDto;
 import com.finance.enums.AuditStatus;
+import com.finance.enums.RoleType;
 import com.finance.exceptions.AuditRecordNotFoundException;
 import com.finance.exceptions.AuditStatusConflictException;
 import com.finance.exceptions.UserNotFoundException;
@@ -48,6 +49,9 @@ public class AuditServiceImpl implements AuditService {
 		List<AuditResponse> result = repository.findAll().stream()
 				.map(auditRecord -> modelMapper.map(auditRecord, AuditResponse.class)).toList();
 
+		if (result.isEmpty()) {
+			throw new AuditRecordNotFoundException(messageUtil.getMessage("error.no.records.present", AUDIT));
+		}
 		log.info("Total audit records fetched: {}", result.size());
 		return result;
 	}
@@ -83,16 +87,11 @@ public class AuditServiceImpl implements AuditService {
 
 	@Override
 	public List<AuditResponse> findByOfficerId(long officerId) {
-		log.info("Fetching audit records for Officer ID: {}", officerId);
-
 		List<Audit> auditRecords = repository.findByOfficerId(officerId);
-
 		if (auditRecords.isEmpty()) {
-			throw new AuditRecordNotFoundException("No audit records found for officerId: " + officerId);
+			throw new AuditRecordNotFoundException(
+					messageUtil.getMessage("error.no.records.found", AUDIT, "Officer ID", officerId));
 		}
-
-		log.info("Total records found for Officer ID {}: {}", officerId, auditRecords.size());
-
 		return auditRecords.stream().map(auditRecord -> modelMapper.map(auditRecord, AuditResponse.class)).toList();
 	}
 
@@ -103,14 +102,15 @@ public class AuditServiceImpl implements AuditService {
 		ResponseEntity<UserResponseDto> response = userFeignClient.getOfficerById(auditBody.getOfficerId());
 
 		if (response == null || !response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-
 			throw new UserNotFoundException(
 					messageUtil.getMessage(NOT_FOUND_MESSAGE, "Officer", auditBody.getOfficerId()));
 		}
 
-		Audit savedAudit = repository.save(modelMapper.map(auditBody, Audit.class));
+		if (!(RoleType.ROLE_GOVERNMENT_AUDITOR.toString().equals(response.getBody().getRole()))) {
+			throw new UserNotFoundException(messageUtil.getMessage("error.unauthorized.auditor"));
+		}
 
-		log.info("Audit record created with ID: {}", savedAudit.getAuditId());
+		Audit savedAudit = repository.save(modelMapper.map(auditBody, Audit.class));
 		return modelMapper.map(savedAudit, AuditResponse.class);
 	}
 

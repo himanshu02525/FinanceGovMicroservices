@@ -47,7 +47,6 @@ public class SubsidyServiceImpl implements SubsidyService {
 	private final ComplianceFeignClient complianceFeignClient;
 
 	@Override
-	@Transactional
 	public SubsidyResponse saveSubsidy(SubsidyRequest request) {
 	    // ✅ Validate citizen externally
 	    Boolean isValid = citizenClient.validateCitizen(request.getEntityId());
@@ -87,7 +86,7 @@ public class SubsidyServiceImpl implements SubsidyService {
 
 	    notificationFeignClient.sendNotification(notification, emailAddr);
 
-	    // ✅ Create compliance record
+//	    //  Create compliance record
 	    ComplianceCreateRequest complianceRequest = new ComplianceCreateRequest();
 	    complianceRequest.setEntityId(saved.getEntityId());
 	    complianceRequest.setReferenceId(saved.getSubsidyId());

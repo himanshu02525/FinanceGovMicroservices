@@ -54,15 +54,12 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 		if (complianceRecord == null || response == null) {
 			return;
 		}
+		fetchExternalDetails(complianceRecord.getType(), complianceRecord.getReferenceID(), response);
+	}
 
-		Long refId = complianceRecord.getReferenceID();
-		ComplianceRecordType type = complianceRecord.getType();
+	private void fetchExternalDetails(ComplianceRecordType type, Long refId, ComplianceResponse response) {
 
-		response.setTaxResponseDTO(null);
-		response.setSubsidyResponse(null);
-		response.setFinancialProgramResponse(null);
-
-		if (type == null || refId == null) {
+		if (type == null || refId == null || response == null) {
 			return;
 		}
 
@@ -113,9 +110,7 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 	public List<ComplianceResponse> findAll() {
 
 		List<ComplianceResponse> responses = repository.findAll().stream().map(entity -> {
-			ComplianceResponse response = modelMapper.map(entity, ComplianceResponse.class);
-			fetchExternalDetails(entity, response);
-			return response;
+			return modelMapper.map(entity, ComplianceResponse.class);
 		}).toList();
 
 		if (responses.isEmpty()) {
@@ -134,6 +129,12 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 		ComplianceResponse response = modelMapper.map(complianceRecord, ComplianceResponse.class);
 
 		fetchExternalDetails(complianceRecord, response);
+		if (response.getType() == ComplianceRecordType.SUBSIDY
+				&& response.getSubsidyResponse().getProgramId() != null) {
+
+			Long programId = response.getSubsidyResponse().getProgramId();
+			fetchExternalDetails(ComplianceRecordType.PROGRAM, programId, response);
+		}
 		return response;
 	}
 

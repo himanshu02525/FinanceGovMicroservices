@@ -4,16 +4,21 @@ import com.finance.enums.Type;
 
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.validation.constraints.*;
-import lombok.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class CitizenBusinessRequestDTO {
-	
+
 	private Long userId;
-	
+
 	@NotBlank(message = "Name is required")
 	@Size(max = 15, message = "Name must not exceed 15 characters")
 	private String name;

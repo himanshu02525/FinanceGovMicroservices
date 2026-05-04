@@ -19,8 +19,9 @@ public interface TaxationService {
     
     List<TaxResponseDTO> getAllTaxRecordsByEntityId(Long entityId);
     
+
     // Officer: Validate payment and notify user of success
-    TaxResponseDTO verifySingleTaxRecord(Long taxId, TaxStatus newStatus); 
+    TaxResponseDTO verifyTaxRecordByTaxId(Long taxId, TaxStatus newStatus); 
     
     // Dashboard: Aggregate fiscal statistics
     Map<String, Object> getTaxStatistics();

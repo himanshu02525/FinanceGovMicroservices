@@ -21,10 +21,17 @@ public class SubsidyApplication {
     @Column(name = "entity_id", nullable = false)
     private Long entityId;   // ✅ this is the field Spring Data will use
     
-    
-    @NotNull(message = "Submitted date is required")
     @PastOrPresent(message = "Submitted date cannot be in the future")
     private LocalDate submittedDate;
+
+    @PrePersist
+    public void prePersist() {
+        if (submittedDate == null) {
+            submittedDate = LocalDate.now();
+        }
+    }
+
+
 
     @ManyToOne
     @JoinColumn(name = "program_id", nullable = false)

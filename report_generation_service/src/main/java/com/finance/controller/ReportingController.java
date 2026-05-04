@@ -49,7 +49,7 @@ public class ReportingController {
         return ResponseEntity.ok(reportingService.getSummaryReports());
     }
 
-    // ✅ ANALYTICS API (FIXED)
+ 
     @GetMapping("/analytics")
     public ResponseEntity<ReportAnalyticsDTO> getAnalytics() {
         log.info("API call: Get analytics data");

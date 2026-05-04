@@ -90,21 +90,6 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 		}
 	}
 
-	/* ================= VALIDATE REFERENCE ================= */
-	private void validateReference(ComplianceRecordType type, long referenceId) {
-
-		switch (type) {
-
-		case TAX -> taxServiceClient.getTaxById(referenceId);
-
-		case SUBSIDY -> programSubsidyFeignClient.getSubsidyById(referenceId);
-
-		case PROGRAM -> programSubsidyFeignClient.getProgramById(referenceId);
-
-		default -> throw new IllegalArgumentException("Unsupported compliance type: " + type);
-		}
-	}
-
 	/* ================= READ ================= */
 	@Override
 	public List<ComplianceResponse> findAll() {
@@ -147,8 +132,6 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 			throw new EntityNotFoundException(
 					messageUtil.getMessage(NOT_FOUND_MESSAGE, "Entity", request.getEntityId()));
 		}
-
-		validateReference(request.getType(), request.getReferenceId());
 
 		ComplianceRecord saved = repository.save(modelMapper.map(request, ComplianceRecord.class));
 

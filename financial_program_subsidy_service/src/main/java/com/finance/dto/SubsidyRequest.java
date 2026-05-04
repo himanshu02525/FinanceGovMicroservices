@@ -1,6 +1,3 @@
-
-
-
 package com.finance.dto;
 
 import java.time.LocalDate;

@@ -13,7 +13,7 @@ import io.jsonwebtoken.security.Keys;
 @Component
 public class JwtUtil {
 
-    // ✅ MUST be identical to Identity service
+    //  MUST be identical to Identity service
     private static final String SECRET =
             "536b83133b8246d8e6319d707200ef0a3ad8aa563071de396d5d25e68c95c4bd";
 

@@ -30,6 +30,7 @@ public class ReportingServiceImpl implements ReportingService {
     private final SubsidyClient subsidyClient;
     private final TaxClient taxClient;
 
+    // Generates a snapshot report based on the requested scope
     @Override
     public Report generateReport(ReportScope scope) {
 
@@ -39,7 +40,6 @@ public class ReportingServiceImpl implements ReportingService {
         report.setScope(scope);
         report.setGeneratedDate(LocalDateTime.now());
 
-        // ---------------- PROGRAM ----------------
         if (scope == ReportScope.PROGRAM) {
             Map<String, Object> program = subsidyClient.getProgramSummary();
 
@@ -48,7 +48,6 @@ public class ReportingServiceImpl implements ReportingService {
             report.setBudgetUsed(((Number) program.get("budgetUsed")).doubleValue());
         }
 
-        // ---------------- SUBSIDY ✅ FIXED ----------------
         if (scope == ReportScope.SUBSIDY) {
             Map<String, Object> subsidy = subsidyClient.getSubsidySummary();
 
@@ -64,7 +63,6 @@ public class ReportingServiceImpl implements ReportingService {
             report.setAmountDistributed(amount.doubleValue());
         }
 
-        // ---------------- TAX ----------------
         if (scope == ReportScope.TAX) {
             Map<String, Object> tax = taxClient.getTaxStatistics();
 
@@ -75,11 +73,13 @@ public class ReportingServiceImpl implements ReportingService {
         return reportRepository.save(report);
     }
 
+    // Returns all reports generated for a given scope
     @Override
     public List<Report> getReportsByScope(ReportScope scope) {
         return reportRepository.findByScope(scope);
     }
 
+    // Fetches a single report by its ID
     @Override
     public Report getReportById(Long id) {
         return reportRepository.findById(id)
@@ -87,8 +87,10 @@ public class ReportingServiceImpl implements ReportingService {
                         new ReportNotFoundException("Report not found with ID: " + id));
     }
 
+    // Generates fresh snapshot reports for all scopes
     @Override
     public Map<ReportScope, Report> getSummaryReports() {
+
         Map<ReportScope, Report> summary =
                 new EnumMap<>(ReportScope.class);
 
@@ -99,10 +101,10 @@ public class ReportingServiceImpl implements ReportingService {
         return summary;
     }
 
+    // Computes analytics based on the latest snapshot report of each scope
     @Override
     public ReportAnalyticsDTO getAnalytics() {
 
-        // Fetch reports by scope
         List<Report> programReports =
                 reportRepository.findByScope(ReportScope.PROGRAM);
 
@@ -112,22 +114,22 @@ public class ReportingServiceImpl implements ReportingService {
         List<Report> taxReports =
                 reportRepository.findByScope(ReportScope.TAX);
 
-        // Get latest report per scope
         Report programReport =
-                programReports.isEmpty() ? null
+                programReports.isEmpty()
+                        ? null
                         : programReports.get(programReports.size() - 1);
 
         Report subsidyReport =
-                subsidyReports.isEmpty() ? null
+                subsidyReports.isEmpty()
+                        ? null
                         : subsidyReports.get(subsidyReports.size() - 1);
 
         Report taxReport =
-                taxReports.isEmpty() ? null
+                taxReports.isEmpty()
+                        ? null
                         : taxReports.get(taxReports.size() - 1);
 
-        // ================= PROGRAM ANALYTICS =================
         double programUtilization = 0;
-
         if (programReport != null &&
             programReport.getTotalPrograms() != null &&
             programReport.getTotalPrograms() > 0) {
@@ -137,7 +139,6 @@ public class ReportingServiceImpl implements ReportingService {
                             programReport.getTotalPrograms();
         }
 
-        // ================= SUBSIDY ANALYTICS =================
         double approvalRate = 0;
         double avgSubsidy = 0;
 
@@ -159,9 +160,7 @@ public class ReportingServiceImpl implements ReportingService {
             }
         }
 
-        // ================= TAX ANALYTICS =================
         double avgRevenue = 0;
-
         if (taxReport != null &&
             taxReport.getTotalTaxpayers() != null &&
             taxReport.getTotalTaxpayers() > 0 &&
@@ -172,22 +171,18 @@ public class ReportingServiceImpl implements ReportingService {
                             taxReport.getTotalTaxpayers();
         }
 
-        // ================= RESPONSE =================
         return new ReportAnalyticsDTO(
 
-                // PROGRAM
                 programReport != null ? programReport.getTotalPrograms() : 0,
                 programReport != null ? programReport.getActivePrograms() : 0,
                 programReport != null ? programReport.getBudgetUsed() : 0,
                 programUtilization,
 
-                // SUBSIDY
                 subsidyReport != null ? subsidyReport.getApplicationsReceived() : 0,
                 subsidyReport != null ? subsidyReport.getApprovedSubsidies() : 0,
                 approvalRate,
                 avgSubsidy,
 
-                // TAX
                 taxReport != null ? taxReport.getTotalTaxpayers() : 0,
                 taxReport != null ? taxReport.getRevenueCollected() : 0,
                 avgRevenue

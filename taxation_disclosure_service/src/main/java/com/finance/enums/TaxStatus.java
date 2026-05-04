@@ -3,5 +3,6 @@ package com.finance.enums;
 public enum TaxStatus {
     PENDING,  
     PAID,     
-    OVERDUE   
+    OVERDUE,
+    VERIFIED
 }

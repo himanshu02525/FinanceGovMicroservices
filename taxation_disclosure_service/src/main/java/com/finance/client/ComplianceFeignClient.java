@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import com.finance.dto.ComplianceCreateRequest;
 import com.finance.dto.ComplianceResponse;
  
-@FeignClient(name = "compliance-service")
+@FeignClient(name = "compliance-audit-service")
 public interface ComplianceFeignClient {
  
     @PostMapping("/compliance")

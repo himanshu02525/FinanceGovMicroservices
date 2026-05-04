@@ -37,14 +37,14 @@ public class JwtAuthenticationWebFilterConfig {
                     .getHeaders()
                     .getFirst(HttpHeaders.AUTHORIZATION);
 
-            // ✅ No token → anonymous (will be blocked by authorizeExchange)
+            //  No token → anonymous (will be blocked by authorizeExchange)
             if (header == null || !header.startsWith("Bearer ")) {
                 return Mono.empty();
             }
 
             String token = header.substring(7);
 
-            // ✅ Invalid token → authentication fails
+            //  Invalid token → authentication fails
             if (!jwtUtil.validateToken(token)) {
                 return Mono.empty();
             }
@@ -61,8 +61,7 @@ public class JwtAuthenticationWebFilterConfig {
             return Mono.just(authentication);
         });
 
-        // ✅ DO NOT set success or failure handlers
-        // ✅ Let Spring Security manage the flow
+        
 
         return filter;
     }

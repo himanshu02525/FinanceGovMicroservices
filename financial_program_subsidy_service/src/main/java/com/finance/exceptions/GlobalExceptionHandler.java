@@ -112,6 +112,24 @@ public class GlobalExceptionHandler {
 	    public ResponseEntity<String> handleIllegalState(IllegalStateException ex) {
 	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
 	    }
+	    
+	   
+	 
+	    @ExceptionHandler(EntityNotFoundException.class)
+	    public ResponseEntity<String> handleEntityNotFound(EntityNotFoundException ex) {
+	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+	    }
+
+	    
+	    @ExceptionHandler(NoSubsidiesFoundException.class)
+	    public ResponseEntity<String> handleNoSubsidiesFound(NoSubsidiesFoundException ex) {
+	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+	    }
+
+	    
+	    
+	    
+	    
 
 
 }

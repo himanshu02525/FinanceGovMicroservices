@@ -16,7 +16,6 @@ public interface ReportingService {
     Report getReportById(Long id);
 
     Map<ReportScope, Report> getSummaryReports();
-   
 
     ReportAnalyticsDTO getAnalytics();
 }

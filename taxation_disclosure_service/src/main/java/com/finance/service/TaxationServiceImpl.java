@@ -100,9 +100,10 @@ public class TaxationServiceImpl implements TaxationService {
 		TaxStatus requestedStatus = taxUpdateDTO.getStatus();
 
 		// ---- VALID STATE TRANSITIONS ----
-		if (currentStatus == TaxStatus.PENDING && requestedStatus == TaxStatus.VERIFIED) {
+		if (currentStatus == TaxStatus.PENDING && requestedStatus == TaxStatus.VERIFIED
+				|| requestedStatus == TaxStatus.REJECTED) {
 
-			record.setStatus(TaxStatus.VERIFIED);
+			record.setStatus(taxUpdateDTO.getStatus());
 
 			// ✅ Create Compliance Record on Verification
 			ComplianceCreateRequest complianceCreateRequest = new ComplianceCreateRequest();
@@ -110,8 +111,8 @@ public class TaxationServiceImpl implements TaxationService {
 			complianceCreateRequest.setReferenceId(record.getTaxId());
 			log.error(record.getTaxId() + "Here is id");
 			complianceCreateRequest.setType(ComplianceRecordType.TAX);
-			complianceCreateRequest.setNotes("Tax record verified by Financial Officer. Compliance review initiated.");
-
+			complianceCreateRequest.setNotes(
+					"Tax record verified by the Financial Officer. Please confirm whether the citizen filed the tax on time.");
 			complianceFeignClient.create(complianceCreateRequest);
 
 		} else if (currentStatus == TaxStatus.VERIFIED
@@ -177,6 +178,7 @@ public class TaxationServiceImpl implements TaxationService {
 		dto.setYear(record.getYear());
 		dto.setAmount(record.getAmount());
 		dto.setStatus(record.getStatus());
+		dto.setCreatedAt(record.getCreatedAt());
 		return dto;
 	}
 }

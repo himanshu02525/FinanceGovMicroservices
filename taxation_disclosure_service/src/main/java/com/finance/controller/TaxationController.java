@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -56,7 +57,7 @@ public class TaxationController {
     	return ResponseEntity.ok(taxationService.getAllTaxRecordsByEntityId(entityId));
     }
  
-    @PatchMapping("/taxrecords/verify/{taxId}")
+    @PutMapping("/taxrecords/verify/{taxId}")
     public ResponseEntity<TaxResponseDTO> verifySingleTax(@PathVariable Long taxId, @RequestBody TaxUpdateDTO taxUpdateDTO) {
         // Approves or rejects a single record by a financial officer
         return ResponseEntity.ok(taxationService.verifyTaxRecordByTaxId(taxId, taxUpdateDTO));

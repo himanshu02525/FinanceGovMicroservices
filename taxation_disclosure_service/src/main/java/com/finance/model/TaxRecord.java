@@ -1,6 +1,9 @@
 package com.finance.model;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
 
 import com.finance.enums.TaxStatus;
 
@@ -51,4 +54,8 @@ public class TaxRecord {
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 15)
 	private TaxStatus status;
+
+	@CreationTimestamp
+	@Column(name = "createdAt", nullable = false, updatable = false)
+	private LocalDateTime createdAt;
 }

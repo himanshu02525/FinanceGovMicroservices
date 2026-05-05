@@ -1,9 +1,11 @@
 package com.finance.client.fallback;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.finance.client.TaxFeignClient;
 import com.finance.dto.TaxResponseDTO;
+import com.finance.dto.TaxUpdateDTO;
 import com.finance.exceptions.ServiceUnavailableException;
 import com.finance.exceptions.TaxRecordNotFoundException;
 import com.finance.util.MessageUtil;
@@ -21,7 +23,7 @@ public class TaxServiceClient {
 	private final MessageUtil messageUtil;
 
 	@CircuitBreaker(name = "taxService", fallbackMethod = "getTaxFallback")
-	public TaxResponseDTO getTaxById(Long taxId) {
+	public ResponseEntity<TaxResponseDTO> getTaxById(Long taxId) {
 		try {
 			return taxFeignClient.getTaxById(taxId);
 		} catch (feign.FeignException.NotFound ex) {
@@ -37,4 +39,23 @@ public class TaxServiceClient {
 		}
 		throw new ServiceUnavailableException(messageUtil.getMessage("external.service.unavailable", "Taxation"));
 	}
+
+	@CircuitBreaker(name = "taxService", fallbackMethod = "getTaxStatusUpdateFallback")
+	public ResponseEntity<TaxResponseDTO> updateStatus(Long taxId, TaxUpdateDTO taxUpdateDTO) {
+		try {
+			return taxFeignClient.updateStatus(taxId);
+		} catch (feign.FeignException.NotFound ex) {
+			throw new TaxRecordNotFoundException(messageUtil.getMessage("not.found.message", "Tax", taxId));
+		}
+	}
+
+	@SuppressWarnings("unused")
+	private TaxResponseDTO getTaxStatusUpdateFallback(Long taxId, Throwable ex) {
+		log.error("Tax service failure for taxId={}. Reason: {}", taxId, ex.getMessage());
+		if (ex instanceof TaxRecordNotFoundException taxRecordNotFoundException) {
+			throw new TaxRecordNotFoundException(messageUtil.getMessage("not.found.message", "Tax", taxId));
+		}
+		throw new ServiceUnavailableException(messageUtil.getMessage("external.service.unavailable", "Taxation"));
+	}
+
 }

@@ -1,25 +1,31 @@
 package com.finance.service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import com.finance.client.fallback.EntityServiceClient;
 import com.finance.client.fallback.ProgramSubsidyServiceClient;
 import com.finance.client.fallback.TaxServiceClient;
 import com.finance.dto.ComplianceCreateRequest;
 import com.finance.dto.ComplianceResponse;
 import com.finance.dto.ComplianceUpdateRequest;
+import com.finance.dto.FinancialProgramResponse;
+import com.finance.dto.SubsidyResponse;
+import com.finance.dto.TaxResponseDTO;
+import com.finance.dto.TaxUpdateDTO;
 import com.finance.enums.ComplianceRecordResult;
 import com.finance.enums.ComplianceRecordType;
+import com.finance.enums.TaxStatus;
 import com.finance.exceptions.AuditStatusConflictException;
 import com.finance.exceptions.ComplianceNotFoundException;
 import com.finance.exceptions.ComplianceStatusConflictException;
-import com.finance.exceptions.EntityNotFoundException;
 import com.finance.exceptions.ProgramNotFoundException;
 import com.finance.exceptions.ServiceUnavailableException;
 import com.finance.exceptions.SubsidyNotFoundException;
@@ -46,7 +52,6 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 	private final MessageUtil messageUtil;
 	private final ProgramSubsidyServiceClient programSubsidyFeignClient;
 	private final TaxServiceClient taxServiceClient;
-	private final EntityServiceClient entityFeignClient;
 
 	/* ================= FETCH EXTERNAL DETAILS ================= */
 	private void fetchExternalDetails(ComplianceRecord complianceRecord, ComplianceResponse response) {
@@ -67,21 +72,30 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 
 		case TAX -> {
 			try {
-				response.setTaxResponseDTO(taxServiceClient.getTaxById(refId));
+				ResponseEntity<TaxResponseDTO> entity = taxServiceClient.getTaxById(refId);
+
+				response.setTaxResponseDTO(entity.getBody());
+
 			} catch (TaxRecordNotFoundException | ServiceUnavailableException ex) {
 			}
 		}
 
 		case SUBSIDY -> {
 			try {
-				response.setSubsidyResponse(programSubsidyFeignClient.getSubsidyById(refId));
+				ResponseEntity<SubsidyResponse> entity = programSubsidyFeignClient.getSubsidyById(refId);
+
+				response.setSubsidyResponse(entity.getBody());
+
 			} catch (SubsidyNotFoundException | ServiceUnavailableException ex) {
 			}
 		}
 
 		case PROGRAM -> {
 			try {
-				response.setFinancialProgramResponse(programSubsidyFeignClient.getProgramById(refId));
+				ResponseEntity<FinancialProgramResponse> entity = programSubsidyFeignClient.getProgramById(refId);
+
+				response.setFinancialProgramResponse(entity.getBody());
+
 			} catch (ProgramNotFoundException | ServiceUnavailableException ex) {
 			}
 		}
@@ -113,28 +127,17 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 
 		ComplianceResponse response = modelMapper.map(complianceRecord, ComplianceResponse.class);
 
+//		ResponseEntity<CitizenBusinessResponseDTO> entityDetails = entityFeignClient
+//				.validateEntity(complianceRecord.getEntityId());
 		fetchExternalDetails(complianceRecord, response);
-		if (response.getType() == ComplianceRecordType.SUBSIDY
-				&& response.getSubsidyResponse().getProgramId() != null) {
 
-			Long programId = response.getSubsidyResponse().getProgramId();
-			fetchExternalDetails(ComplianceRecordType.PROGRAM, programId, response);
-		}
 		return response;
 	}
 
 	/* ================= CREATE ================= */
 	@Override
 	public ComplianceResponse create(ComplianceCreateRequest request) {
-
-		if (Boolean.FALSE.equals(entityFeignClient.validateEntity(request.getEntityId()))) {
-
-			throw new EntityNotFoundException(
-					messageUtil.getMessage(NOT_FOUND_MESSAGE, "Entity", request.getEntityId()));
-		}
-
 		ComplianceRecord saved = repository.save(modelMapper.map(request, ComplianceRecord.class));
-
 		return modelMapper.map(saved, ComplianceResponse.class);
 	}
 
@@ -166,7 +169,62 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 		complianceRecord.setNotes(body.getNotes());
 		complianceRecord.setResult(body.getResult());
 
+		boolean result = updateRelaventData(complianceRecord.getType(), complianceRecord.getReferenceID(),
+				body.getResult());
 		return modelMapper.map(repository.save(complianceRecord), ComplianceResponse.class);
+
+	}
+
+	public boolean updateRelaventData(ComplianceRecordType complianceRecordType, Long refId,
+			ComplianceRecordResult complianceRecordResult) {
+
+		if (complianceRecordType == null || refId == null) {
+			return false;
+		}
+
+		switch (complianceRecordType) {
+
+		case TAX -> {
+			try {
+				TaxUpdateDTO taxUpdateDTO = new TaxUpdateDTO();
+
+				LocalDate today = LocalDate.now();
+				LocalDate dueDate = LocalDate.of(today.getYear(), Month.MARCH, 30);
+
+				if (today.isAfter(dueDate)) {
+					taxUpdateDTO.setStatus(TaxStatus.OVERDUE);
+				} else {
+					switch (complianceRecordResult) {
+					case PASS -> taxUpdateDTO.setStatus(TaxStatus.PAID);
+					case FAIL -> taxUpdateDTO.setStatus(TaxStatus.PENDING);
+					default -> taxUpdateDTO.setStatus(TaxStatus.VERIFIED);
+					}
+				}
+
+				ResponseEntity<?> response = taxServiceClient.updateStatus(refId, taxUpdateDTO);
+
+				return response != null && response.getStatusCode().is2xxSuccessful();
+
+			} catch (TaxRecordNotFoundException | ServiceUnavailableException ex) {
+				throw new ServiceUnavailableException("Service Unaviable");
+			}
+		}
+
+		case SUBSIDY -> {
+			try {
+				programSubsidyFeignClient.getSubsidyById(refId);
+
+				ResponseEntity<FinancialProgramResponse> response = programSubsidyFeignClient.updateStatus(refId);
+
+				return response != null && response.getStatusCode().is2xxSuccessful();
+
+			} catch (SubsidyNotFoundException | ServiceUnavailableException ex) {
+				return false;
+			}
+		}
+
+		default -> throw new IllegalArgumentException("Unsupported ComplianceRecordType: " + complianceRecordType);
+		}
 	}
 
 	/* ================= DELETE ================= */

@@ -1,12 +1,15 @@
 package com.finance.client;
 
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+
+import com.finance.dto.CitizenBusinessResponseDTO;
 
 @FeignClient(name = "citizen-business-service")
 public interface EntityFeignClient {
 
-	@GetMapping("/entities/validate/{entityId}")
-	Boolean validateEntity(@PathVariable Long entityId);
+	@GetMapping("/entities/getCitizenById/{id}")
+	ResponseEntity<CitizenBusinessResponseDTO> getCitizenById(@PathVariable Long entityId);
 }

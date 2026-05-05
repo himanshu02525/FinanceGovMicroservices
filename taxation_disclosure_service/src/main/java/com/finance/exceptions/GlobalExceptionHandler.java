@@ -14,7 +14,7 @@ import org.springframework.web.context.request.WebRequest;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-@RestControllerAdvice 
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
 	// 1. Handle Resource Not Found (Generic catch for missing DB entries)
@@ -60,10 +60,17 @@ public class GlobalExceptionHandler {
 	}
 
 	// 6. Global Fallback (Catch-all for 500 Internal Server Errors)
-	@ExceptionHandler(Exception.class)
-	public ResponseEntity<Object> handleGeneralException(Exception ex, WebRequest request) {
-		// Logs the actual stack trace for developers while hiding details from users
-		return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected internal error occurred", request);
+//	@ExceptionHandler(Exception.class)
+//	public ResponseEntity<Object> handleGeneralException(Exception ex, WebRequest request) {
+//		// Logs the actual stack trace for developers while hiding details from users
+//		return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected internal error occurred", request);
+//	}
+
+	@ExceptionHandler(InvalidTaxStatusTransitionException.class)
+	public ResponseEntity<Object> handleInvalidTaxStatusTransition(InvalidTaxStatusTransitionException ex,
+			WebRequest request) {
+
+		return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
 	}
 
 	// Centralized helper to build the JSON error body
@@ -78,9 +85,9 @@ public class GlobalExceptionHandler {
 		return new ResponseEntity<>(body, status);
 	}
 
-	
-	 //Inner class for structured error responses (can be used instead of Map if preferred)
-	 
+	// Inner class for structured error responses (can be used instead of Map if
+	// preferred)
+
 	@Data
 	@AllArgsConstructor
 	public static class ErrorResponse {

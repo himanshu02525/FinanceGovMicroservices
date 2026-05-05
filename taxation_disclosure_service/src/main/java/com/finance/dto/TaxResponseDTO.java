@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
 import com.finance.enums.TaxStatus;
 
 @Data
@@ -17,4 +19,5 @@ public class TaxResponseDTO {
     private Integer year; 
     private BigDecimal amount; 
     private TaxStatus status; 
+    private LocalDateTime createdAt;
 }

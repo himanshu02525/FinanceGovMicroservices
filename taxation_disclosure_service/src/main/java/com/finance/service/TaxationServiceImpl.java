@@ -1,5 +1,6 @@
 package com.finance.service;
 
+import java.time.LocalDateTime;
 import java.time.Year;
 import java.util.HashMap;
 import java.util.List;
@@ -72,7 +73,7 @@ public class TaxationServiceImpl implements TaxationService {
 		taxRecord.setYear(request.getYear());
 		taxRecord.setAmount(request.getAmount());
 		taxRecord.setStatus(TaxStatus.PENDING);
-
+		taxRecord.setCreatedAt(LocalDateTime.now());
 		TaxRecord saved = taxRepository.save(taxRecord);
 		return mapToResponseDTO(saved);
 	}

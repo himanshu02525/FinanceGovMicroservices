@@ -32,29 +32,35 @@ public class TaxServiceClient {
 	}
 
 	@SuppressWarnings("unused")
-	private TaxResponseDTO getTaxFallback(Long taxId, Throwable ex) {
-		log.error("Tax service failure for taxId={}. Reason: {}", taxId, ex.getMessage());
-		if (ex instanceof TaxRecordNotFoundException taxRecordNotFoundException) {
-			throw new TaxRecordNotFoundException(messageUtil.getMessage("not.found.message", "Tax", taxId));
+	private ResponseEntity<TaxResponseDTO> getTaxFallback(Long taxId, Throwable ex) {
+
+		log.error("Tax service failure for taxId={}", taxId, ex);
+
+		if (ex instanceof TaxRecordNotFoundException tnfe) {
+			throw tnfe;
 		}
+
 		throw new ServiceUnavailableException(messageUtil.getMessage("external.service.unavailable", "Taxation"));
 	}
 
 	@CircuitBreaker(name = "taxService", fallbackMethod = "getTaxStatusUpdateFallback")
-	public ResponseEntity<TaxResponseDTO> updateStatus(Long taxId, TaxUpdateDTO taxUpdateDTO) {
+	public ResponseEntity<TaxResponseDTO> verifySingleTax(Long taxId, TaxUpdateDTO taxUpdateDTO) {
 		try {
-			return taxFeignClient.updateStatus(taxId);
+			return taxFeignClient.verifySingleTax(taxId, taxUpdateDTO);
 		} catch (feign.FeignException.NotFound ex) {
 			throw new TaxRecordNotFoundException(messageUtil.getMessage("not.found.message", "Tax", taxId));
 		}
 	}
 
 	@SuppressWarnings("unused")
-	private TaxResponseDTO getTaxStatusUpdateFallback(Long taxId, Throwable ex) {
-		log.error("Tax service failure for taxId={}. Reason: {}", taxId, ex.getMessage());
-		if (ex instanceof TaxRecordNotFoundException taxRecordNotFoundException) {
-			throw new TaxRecordNotFoundException(messageUtil.getMessage("not.found.message", "Tax", taxId));
+	private ResponseEntity<TaxResponseDTO> getTaxStatusUpdateFallback(Long taxId, Throwable ex) {
+
+		log.error("Tax update failure for taxId={}", taxId, ex);
+
+		if (ex instanceof TaxRecordNotFoundException tnfe) {
+			throw tnfe;
 		}
+
 		throw new ServiceUnavailableException(messageUtil.getMessage("external.service.unavailable", "Taxation"));
 	}
 

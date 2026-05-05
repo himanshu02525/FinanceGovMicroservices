@@ -201,7 +201,7 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 					}
 				}
 
-				ResponseEntity<?> response = taxServiceClient.updateStatus(refId, taxUpdateDTO);
+				ResponseEntity<?> response = taxServiceClient.verifySingleTax(refId, taxUpdateDTO);
 
 				return response != null && response.getStatusCode().is2xxSuccessful();
 

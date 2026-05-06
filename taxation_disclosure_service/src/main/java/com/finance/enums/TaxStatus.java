@@ -4,6 +4,8 @@ public enum TaxStatus {
     PENDING,  
     PAID,     
     OVERDUE,
-    VERIFIED,
-    REJECTED
+    REJECTED,
+    VERIFIED_INITIAL,
+    VERIFIED_FINAL
+    
 }

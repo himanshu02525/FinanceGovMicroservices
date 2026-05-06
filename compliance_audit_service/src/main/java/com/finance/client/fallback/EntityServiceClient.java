@@ -1,8 +1,10 @@
 package com.finance.client.fallback;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.finance.client.EntityFeignClient;
+import com.finance.dto.CitizenBusinessResponseDTO;
 import com.finance.exceptions.EntityNotFoundException;
 import com.finance.exceptions.ServiceUnavailableException;
 import com.finance.util.MessageUtil;
@@ -20,9 +22,9 @@ public class EntityServiceClient {
 	private final MessageUtil messageUtil;
 
 	@CircuitBreaker(name = "entityService", fallbackMethod = "validateEntityFallback")
-	public Boolean validateEntity(Long entityId) {
+	public ResponseEntity<CitizenBusinessResponseDTO> validateEntity(Long entityId) {
 		try {
-			return entityFeignClient.validateEntity(entityId);
+			return entityFeignClient.getCitizenById(entityId);
 		} catch (feign.FeignException.NotFound ex) {
 			throw new EntityNotFoundException(messageUtil.getMessage("not.found.message", "Entity", entityId));
 		}

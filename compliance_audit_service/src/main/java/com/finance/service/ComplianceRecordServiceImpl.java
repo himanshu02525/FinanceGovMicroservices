@@ -6,21 +6,28 @@ import java.util.List;
 import java.util.Map;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import com.finance.client.fallback.EntityServiceClient;
+import com.finance.client.EntityFeignClient;
 import com.finance.client.fallback.ProgramSubsidyServiceClient;
 import com.finance.client.fallback.TaxServiceClient;
+import com.finance.dto.CitizenBusinessResponseDTO;
 import com.finance.dto.ComplianceCreateRequest;
 import com.finance.dto.ComplianceResponse;
 import com.finance.dto.ComplianceUpdateRequest;
+import com.finance.dto.FinancialProgramResponse;
+import com.finance.dto.SubsidyResponse;
+import com.finance.dto.SubsidyUpdateRequest;
+import com.finance.dto.TaxResponseDTO;
+import com.finance.dto.TaxUpdateDTO;
 import com.finance.enums.ComplianceRecordResult;
 import com.finance.enums.ComplianceRecordType;
+import com.finance.enums.SubsidyStatus;
+import com.finance.enums.TaxStatus;
 import com.finance.exceptions.AuditStatusConflictException;
 import com.finance.exceptions.ComplianceNotFoundException;
 import com.finance.exceptions.ComplianceStatusConflictException;
-import com.finance.exceptions.EntityNotFoundException;
-import com.finance.exceptions.ProgramNotFoundException;
 import com.finance.exceptions.ServiceUnavailableException;
 import com.finance.exceptions.SubsidyNotFoundException;
 import com.finance.exceptions.TaxRecordNotFoundException;
@@ -46,59 +53,60 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 	private final MessageUtil messageUtil;
 	private final ProgramSubsidyServiceClient programSubsidyFeignClient;
 	private final TaxServiceClient taxServiceClient;
-	private final EntityServiceClient entityFeignClient;
+	private final EntityFeignClient entityFeignClient;
 
 	/* ================= FETCH EXTERNAL DETAILS ================= */
-	private void fetchExternalDetails(ComplianceRecord complianceRecord, ComplianceResponse response) {
+	private void fetchExternalDetails(ComplianceResponse response) {
+		Long lookupId = response.getReferenceId();
+		ComplianceRecordType type = response.getType();
 
-		if (complianceRecord == null || response == null) {
-			return;
-		}
-		fetchExternalDetails(complianceRecord.getType(), complianceRecord.getReferenceID(), response);
-	}
-
-	private void fetchExternalDetails(ComplianceRecordType type, Long refId, ComplianceResponse response) {
-
-		if (type == null || refId == null || response == null) {
+		if (type == null || lookupId == null) {
+			log.warn(" Skipping external fetch: Type or Reference ID is missing for Response ID: {}",
+					response.getComplianceId());
 			return;
 		}
 
-		switch (type) {
+		log.info(" Initiating external fetch for Type: {} and ID: {}", type, lookupId);
 
-		case TAX -> {
-			try {
-				response.setTaxResponseDTO(taxServiceClient.getTaxById(refId));
-			} catch (TaxRecordNotFoundException | ServiceUnavailableException ex) {
+		try {
+			switch (type) {
+			case TAX -> {
+				log.debug("[TaxClient] Requesting tax details for ID: {}", lookupId);
+				TaxResponseDTO tax = taxServiceClient.getTaxById(lookupId).getBody();
+				response.setTaxResponseDTO(tax);
+				if (tax != null) {
+					log.info("[TaxClient] Successfully retrieved tax data: {}", tax);
+				}
 			}
-		}
-
-		case SUBSIDY -> {
-			try {
-				response.setSubsidyResponse(programSubsidyFeignClient.getSubsidyById(refId));
-			} catch (SubsidyNotFoundException | ServiceUnavailableException ex) {
+			case SUBSIDY -> {
+				log.debug("[SubsidyClient] Requesting subsidy details for ID: {}", lookupId);
+				SubsidyResponse subsidy = programSubsidyFeignClient.getSubsidyById(lookupId).getBody();
+				response.setSubsidyResponse(subsidy);
+				log.info("[SubsidyClient] Successfully retrieved subsidy data");
 			}
-		}
-
-		case PROGRAM -> {
-			try {
-				response.setFinancialProgramResponse(programSubsidyFeignClient.getProgramById(refId));
-			} catch (ProgramNotFoundException | ServiceUnavailableException ex) {
+			case PROGRAM -> {
+				log.debug("[ProgramClient] Requesting program details for ID: {}", lookupId);
+				FinancialProgramResponse program = programSubsidyFeignClient.getProgramById(lookupId).getBody();
+				response.setFinancialProgramResponse(program);
+				log.info("[ProgramClient] Successfully retrieved program data");
 			}
-		}
-
-		default -> throw new IllegalArgumentException("Unsupported ComplianceRecordType: " + type);
+			}
+		} catch (Exception ex) {
+			log.error(" CRITICAL ERROR: Failed to fetch external details for type {} and ID {}. Reason: {}", type,
+					lookupId, ex.getMessage(), ex);
 		}
 	}
 
 	/* ================= READ ================= */
 	@Override
 	public List<ComplianceResponse> findAll() {
-
+		log.info(" Fetching all compliance records");
 		List<ComplianceResponse> responses = repository.findAll().stream().map(entity -> {
 			return modelMapper.map(entity, ComplianceResponse.class);
 		}).toList();
 
 		if (responses.isEmpty()) {
+			log.warn(" No compliance records found in the system");
 			throw new ComplianceNotFoundException(messageUtil.getMessage("error.no.records.present", COMPLIANCE));
 		}
 
@@ -107,40 +115,36 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 
 	@Override
 	public ComplianceResponse findById(long complianceId) {
-		ComplianceRecord complianceRecord = repository.findById(complianceId)
-				.orElseThrow(() -> new ComplianceNotFoundException(
-						messageUtil.getMessage(NOT_FOUND_MESSAGE, COMPLIANCE, complianceId)));
+		log.info(" Searching for compliance record with ID: {}", complianceId);
+		ComplianceRecord complianceRecord = repository.findById(complianceId).orElseThrow(() -> {
+			log.error(" Record not found for ID: {}", complianceId);
+			return new ComplianceNotFoundException(messageUtil.getMessage(NOT_FOUND_MESSAGE, COMPLIANCE, complianceId));
+		});
 
 		ComplianceResponse response = modelMapper.map(complianceRecord, ComplianceResponse.class);
 
-		fetchExternalDetails(complianceRecord, response);
-		if (response.getType() == ComplianceRecordType.SUBSIDY
-				&& response.getSubsidyResponse().getProgramId() != null) {
+		log.info(" Found record. Fetching associated Citizen/Business details for Entity ID: {}",
+				complianceRecord.getEntityId());
+		ResponseEntity<CitizenBusinessResponseDTO> entityDetails = entityFeignClient
+				.getCitizenById(complianceRecord.getEntityId());
 
-			Long programId = response.getSubsidyResponse().getProgramId();
-			fetchExternalDetails(ComplianceRecordType.PROGRAM, programId, response);
-		}
+		fetchExternalDetails(response);
 		return response;
 	}
 
 	/* ================= CREATE ================= */
 	@Override
 	public ComplianceResponse create(ComplianceCreateRequest request) {
-
-		if (Boolean.FALSE.equals(entityFeignClient.validateEntity(request.getEntityId()))) {
-
-			throw new EntityNotFoundException(
-					messageUtil.getMessage(NOT_FOUND_MESSAGE, "Entity", request.getEntityId()));
-		}
-
+		log.info(" Creating new record for Entity ID: {} of Type: {}", request.getEntityId(), request.getType());
 		ComplianceRecord saved = repository.save(modelMapper.map(request, ComplianceRecord.class));
-
+		log.info(" Successfully saved new compliance record with Generated ID: {}", saved.getComplianceId());
 		return modelMapper.map(saved, ComplianceResponse.class);
 	}
 
 	/* ================= UPDATE ================= */
 	@Override
 	public ComplianceResponse update(long complianceId, ComplianceUpdateRequest body) {
+		log.info(" Update initiated for ID: {}. Target Result: {}", complianceId, body.getResult());
 
 		ComplianceRecord complianceRecord = repository.findById(complianceId)
 				.orElseThrow(() -> new ComplianceNotFoundException(
@@ -149,41 +153,118 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 		if (complianceRecord.getResult() == ComplianceRecordResult.PASS
 				|| complianceRecord.getResult() == ComplianceRecordResult.FAIL) {
 
+			log.warn(" Update rejected: Record {} is already in terminal state {}", complianceId,
+					complianceRecord.getResult());
 			throw new ComplianceStatusConflictException(messageUtil.getMessage("record.update.invalid.message",
 					COMPLIANCE, complianceRecord.getResult(), complianceId));
 		}
 
 		if (body.getResult() == ComplianceRecordResult.PENDING) {
+			log.warn(" Update rejected: Cannot set status back to PENDING for ID: {}", complianceId);
 			throw new AuditStatusConflictException(
 					messageUtil.getMessage("record.status.pending.invalid", COMPLIANCE, "PENDING", complianceId));
 		}
 
 		if (body.getResult() == ComplianceRecordResult.PASS || body.getResult() == ComplianceRecordResult.FAIL) {
-
 			complianceRecord.setClosedAt(LocalDateTime.now());
+			log.info(" Record {} finalized. Closing at {}", complianceId, complianceRecord.getClosedAt());
 		}
 
 		complianceRecord.setNotes(body.getNotes());
 		complianceRecord.setResult(body.getResult());
 
-		return modelMapper.map(repository.save(complianceRecord), ComplianceResponse.class);
+		log.info(" Triggering external data sync for RefID: {}", complianceRecord.getReferenceID());
+		if (body.getResult() == ComplianceRecordResult.FAIL || body.getResult() == ComplianceRecordResult.PASS) {
+			updateRelaventData(complianceRecord.getType(), complianceRecord.getReferenceID(), body.getResult());
+		}
+		ComplianceRecord updated = repository.save(complianceRecord);
+		log.info(" Compliance record {} successfully updated in database", complianceId);
+		return modelMapper.map(updated, ComplianceResponse.class);
+	}
+
+	public void updateRelaventData(ComplianceRecordType complianceRecordType, Long refId,
+			ComplianceRecordResult complianceRecordResult) {
+
+		if (complianceRecordType == null || refId == null) {
+			log.warn("[ExternalSync] Sync skipped: Type or RefId is null");
+			return;
+		}
+
+		log.info("[ExternalSync] Syncing {} record (RefID: {}) with result {}", complianceRecordType, refId,
+				complianceRecordResult);
+
+		switch (complianceRecordType) {
+
+		case TAX -> {
+			try {
+				ResponseEntity<TaxResponseDTO> taxRecord = taxServiceClient.getTaxById(refId);
+
+				if (taxRecord == null || taxRecord.getBody() == null) {
+					log.error("[TaxSync] Failed: No Tax record found for RefID: {}", refId);
+					return;
+				}
+
+				TaxUpdateDTO taxUpdateDTO = new TaxUpdateDTO();
+
+				TaxStatus status = TaxStatus.VERIFIED_INITIAL;
+
+				if (complianceRecordResult == ComplianceRecordResult.PASS) {
+					status = TaxStatus.VERIFIED_FINAL;
+				} else if (complianceRecordResult == ComplianceRecordResult.FAIL) {
+					status = TaxStatus.REJECTED;
+				}
+				taxUpdateDTO.setStatus(status);
+				log.debug("[TaxSync] Sending status {} to Tax Service for RefID: {}", status, refId);
+				taxServiceClient.verifySingleTax(refId, taxUpdateDTO);
+				log.info("[TaxSync] Successfully updated Tax record status");
+
+			} catch (TaxRecordNotFoundException | ServiceUnavailableException ex) {
+				log.error("[TaxSync] External service error during sync: {}", ex.getMessage());
+			}
+		}
+		case SUBSIDY -> {
+			try {
+				SubsidyUpdateRequest subsidyUpdateRequest = new SubsidyUpdateRequest();
+
+				ResponseEntity<SubsidyResponse> subsidy = programSubsidyFeignClient.getSubsidyById(refId);
+				if (complianceRecordResult == ComplianceRecordResult.FAIL) {
+					subsidyUpdateRequest.setStatus(SubsidyStatus.CANCELLED);
+
+				} else if (complianceRecordResult == ComplianceRecordResult.PASS) {
+					subsidyUpdateRequest.setStatus(SubsidyStatus.GRANTED);
+				}
+				programSubsidyFeignClient.updateSubsidy(subsidyUpdateRequest, refId);
+				log.info("[SubsidySync] Successfully updated Subsidy status for RefID: {}", refId);
+			} catch (SubsidyNotFoundException | ServiceUnavailableException ex) {
+				log.error("[SubsidySync] External service error during sync: {}", ex.getMessage());
+			}
+		}
+
+		default -> {
+			log.error("[ExternalSync] Unsupported Record Type: {}", complianceRecordType);
+			throw new IllegalArgumentException("Unsupported ComplianceRecordType: " + complianceRecordType);
+		}
+		}
 	}
 
 	/* ================= DELETE ================= */
 	@Override
 	public String delete(long complianceId) {
-
+		log.info(" Deleting record ID: {}", complianceId);
 		if (!repository.existsById(complianceId)) {
+			log.error(" Delete failed: Record {} not found", complianceId);
 			throw new ComplianceNotFoundException(messageUtil.getMessage(NOT_FOUND_MESSAGE, COMPLIANCE, complianceId));
 		}
 
 		repository.deleteById(complianceId);
+		log.info(" Record {} deleted successfully", complianceId);
 		return messageUtil.getMessage("delete.message", COMPLIANCE, complianceId);
 	}
 
 	/* ================= SUMMARY ================= */
 	@Override
 	public Map<String, Integer> getSummary() {
+		log.info(" Generating compliance summary report");
 		Map<String, Integer> summary = new LinkedHashMap<>();
 		int total = 0;
 		for (ComplianceRecordResult status : ComplianceRecordResult.values()) {
@@ -197,8 +278,10 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 
 	@Override
 	public List<ComplianceResponse> findByEntityId(long entityId) {
+		log.info(" Fetching records for Entity ID: {}", entityId);
 		List<ComplianceRecord> complianceRecords = repository.findByEntityId(entityId);
 		if (complianceRecords.isEmpty()) {
+			log.warn(" No records found for Entity ID: {}", entityId);
 			throw new ComplianceNotFoundException(messageUtil.getMessage(NOT_FOUND_MESSAGE, COMPLIANCE, entityId));
 		}
 		return complianceRecords.stream()

@@ -19,12 +19,16 @@ import com.finance.service.TaxationService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
+
 @RequestMapping("/api/taxation")
+
 @RequiredArgsConstructor
+
 public class TaxationController {
 
     private final TaxationService taxationService;

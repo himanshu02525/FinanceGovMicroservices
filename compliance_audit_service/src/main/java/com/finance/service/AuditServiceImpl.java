@@ -44,21 +44,22 @@ public class AuditServiceImpl implements AuditService {
 
 	@Override
 	public List<AuditResponse> findAll() {
-		log.info("Fetching all audit records");
+		log.info("Fetching all audit records from database");
 
 		List<AuditResponse> result = repository.findAll().stream()
 				.map(auditRecord -> modelMapper.map(auditRecord, AuditResponse.class)).toList();
 
 		if (result.isEmpty()) {
+			log.warn("No audit records found in the repository");
 			throw new AuditRecordNotFoundException(messageUtil.getMessage("error.no.records.present", AUDIT));
 		}
-		log.info("Total audit records fetched: {}", result.size());
+		log.info("Successfully fetched {} audit records", result.size());
 		return result;
 	}
 
 	@Override
 	public Map<String, Integer> getSummary() {
-		log.info("Generating audit summary by status");
+		log.info("Generating audit status summary report");
 
 		Map<String, Integer> summary = new LinkedHashMap<>();
 		int allCount = 0;
@@ -66,95 +67,106 @@ public class AuditServiceImpl implements AuditService {
 			int countByStatus = repository.countByStatus(status);
 			allCount += countByStatus;
 			summary.put(status.toString(), countByStatus);
+			log.debug("Status: {}, Count: {}", status, countByStatus);
 		}
 		summary.put("All", allCount);
-		log.info("Audit summary generated successfully");
+		log.info("Summary generation complete. Total records: {}", allCount);
 		return summary;
 	}
 
 	@Override
 	public AuditResponse findById(long auditId) {
-		log.info("Fetching audit record with ID: {}", auditId);
+		log.info("Searching for audit record ID: {}", auditId);
 
 		Audit existingAudit = repository.findById(auditId).orElseThrow(() -> {
-			log.warn("Audit record not found for ID: {}", auditId);
+			log.error("Audit record NOT FOUND for ID: {}", auditId);
 			return new AuditRecordNotFoundException(messageUtil.getMessage(NOT_FOUND_MESSAGE, AUDIT, auditId));
 		});
 
-		log.info("Audit record found for ID: {}", auditId);
+		log.info("Successfully retrieved audit record for ID: {}", auditId);
 		return modelMapper.map(existingAudit, AuditResponse.class);
 	}
 
 	@Override
 	public List<AuditResponse> findByOfficerId(long officerId) {
+		log.info("Fetching audit records assigned to Officer ID: {}", officerId);
+
 		List<Audit> auditRecords = repository.findByOfficerId(officerId);
 		if (auditRecords.isEmpty()) {
+			log.warn("No audit records found for Officer ID: {}", officerId);
 			throw new AuditRecordNotFoundException(
 					messageUtil.getMessage("error.no.records.found", AUDIT, "Officer ID", officerId));
 		}
+
+		log.info("Found {} records for Officer ID: {}", auditRecords.size(), officerId);
 		return auditRecords.stream().map(auditRecord -> modelMapper.map(auditRecord, AuditResponse.class)).toList();
 	}
 
 	@Override
 	public AuditResponse create(AuditCreateRequest auditBody) {
-		log.info("Creating new audit record");
+		log.info("Creating new audit by Officer ID: {}", auditBody.getOfficerId(), auditBody.getOfficerId());
 
+		log.debug("[UserClient] Validating Officer ID: {} via User Service", auditBody.getOfficerId());
 		ResponseEntity<UserResponseDto> response = userFeignClient.getOfficerById(auditBody.getOfficerId());
 
 		if (response == null || !response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+			log.error("[UserClient] Validation Failed: Officer ID {} not found", auditBody.getOfficerId());
 			throw new UserNotFoundException(
 					messageUtil.getMessage(NOT_FOUND_MESSAGE, "Officer", auditBody.getOfficerId()));
 		}
 
 		if (!(RoleType.ROLE_GOVERNMENT_AUDITOR.toString().equals(response.getBody().getRole()))) {
+			log.warn("Security Alert: User {} is not an authorized auditor", auditBody.getOfficerId());
 			throw new UserNotFoundException(messageUtil.getMessage("error.unauthorized.auditor"));
 		}
 
 		Audit savedAudit = repository.save(modelMapper.map(auditBody, Audit.class));
+		log.info("New audit created successfully with Generated ID: {}", savedAudit.getAuditId());
 		return modelMapper.map(savedAudit, AuditResponse.class);
 	}
 
 	@Override
 	public AuditResponse update(long auditId, AuditUpdateRequest auditBody) {
+		log.info("Update request for Audit ID: {} -> New Status: {}", auditId, auditBody.getStatus());
 
-		log.info("Updating audit record with ID: {}", auditId);
+		Audit existingAudit = repository.findById(auditId).orElseThrow(() -> {
+			log.error("Update failed: Audit ID {} not found", auditId);
+			return new AuditRecordNotFoundException(messageUtil.getMessage(NOT_FOUND_MESSAGE, AUDIT, auditId));
+		});
 
-		Audit existingAudit = repository.findById(auditId).orElseThrow(
-				() -> new AuditRecordNotFoundException(messageUtil.getMessage(NOT_FOUND_MESSAGE, AUDIT, auditId)));
 		if (existingAudit.getStatus() == AuditStatus.COMPLETED) {
+			log.warn("Update rejected: Audit ID {} is already COMPLETED", auditId);
 			throw new AuditStatusConflictException(messageUtil.getMessage("record.update.invalid.message", AUDIT,
 					AuditStatus.COMPLETED.toString(), auditId));
 		}
 
 		if (auditBody.getStatus() == AuditStatus.PENDING) {
+			log.warn("Invalid status transition: Cannot revert Audit ID {} to PENDING", auditId);
 			throw new AuditStatusConflictException(messageUtil.getMessage("record.status.pending.invalid", AUDIT,
 					AuditStatus.PENDING.toString(), auditId));
 		}
+
 		existingAudit.setFindings(auditBody.getFindings());
 		existingAudit.setStatus(auditBody.getStatus());
 
 		if (auditBody.getStatus() == AuditStatus.COMPLETED) {
 			existingAudit.setClosedAt(LocalDateTime.now());
+			log.info("Closing audit record ID: {} at {}", auditId, existingAudit.getClosedAt());
 		}
 
 		Audit updated = repository.save(existingAudit);
-
-		log.info("Audit record updated successfully for ID: {}", auditId);
+		log.info("Audit record ID: {} updated successfully", auditId);
 
 		return modelMapper.map(updated, AuditResponse.class);
 	}
 
 	@Override
 	public String delete(long auditId) {
-		log.info("Attempting to delete audit record with ID: {}", auditId);
-
+		log.info("Attempting to delete audit record ID: {}", auditId);
 		findById(auditId);
-
 		repository.deleteById(auditId);
 
-		log.info("Audit record deleted successfully with ID: {}", auditId);
+		log.info("Audit record ID: {} deleted successfully from database", auditId);
 		return messageUtil.getMessage("delete.message", AUDIT, auditId);
-
 	}
-
 }

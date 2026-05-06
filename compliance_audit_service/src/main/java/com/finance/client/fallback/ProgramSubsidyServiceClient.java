@@ -1,10 +1,12 @@
 package com.finance.client.fallback;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.finance.client.ProgramSubsidyFeignClient;
 import com.finance.dto.FinancialProgramResponse;
 import com.finance.dto.SubsidyResponse;
+import com.finance.dto.SubsidyUpdateRequest;
 import com.finance.exceptions.ProgramNotFoundException;
 import com.finance.exceptions.ServiceUnavailableException;
 import com.finance.exceptions.SubsidyNotFoundException;
@@ -23,7 +25,7 @@ public class ProgramSubsidyServiceClient {
 	private final MessageUtil messageUtil;
 
 	@CircuitBreaker(name = "programSubsidyService", fallbackMethod = "getProgramFallback")
-	public FinancialProgramResponse getProgramById(Long id) {
+	public ResponseEntity<FinancialProgramResponse> getProgramById(Long id) {
 		try {
 			return programSubsidyFeignClient.getProgramById(id);
 		} catch (feign.FeignException.NotFound ex) {
@@ -32,16 +34,19 @@ public class ProgramSubsidyServiceClient {
 	}
 
 	@SuppressWarnings("unused")
-	private FinancialProgramResponse getProgramFallback(Long id, Throwable ex) {
-		log.error("Program service error for id={}: {}", id, ex.getMessage());
-		if (ex instanceof ProgramNotFoundException programNotFoundException) {
-			throw programNotFoundException;
+	private ResponseEntity<FinancialProgramResponse> getProgramFallback(Long id, Throwable ex) {
+
+		log.error("Program service error for id={}", id, ex);
+
+		if (ex instanceof ProgramNotFoundException pnfe) {
+			throw pnfe;
 		}
+
 		throw new ServiceUnavailableException(messageUtil.getMessage("external.service.unavailable", "Program"));
 	}
 
 	@CircuitBreaker(name = "programSubsidyService", fallbackMethod = "getSubsidyFallback")
-	public SubsidyResponse getSubsidyById(Long id) {
+	public ResponseEntity<SubsidyResponse> getSubsidyById(Long id) {
 		try {
 			return programSubsidyFeignClient.getSubsidyById(id);
 		} catch (feign.FeignException.NotFound ex) {
@@ -50,11 +55,35 @@ public class ProgramSubsidyServiceClient {
 	}
 
 	@SuppressWarnings("unused")
-	private SubsidyResponse getSubsidyFallback(Long id, Throwable ex) {
-		log.error("Subsidy service error for id={}: {}", id, ex.getMessage());
-		if (ex instanceof SubsidyNotFoundException subsidyNotFoundException) {
-			throw subsidyNotFoundException;
+	private ResponseEntity<SubsidyResponse> getSubsidyFallback(Long id, Throwable ex) {
+
+		log.error("Subsidy service error for id={}", id, ex);
+
+		if (ex instanceof SubsidyNotFoundException snfe) {
+			throw snfe;
 		}
+
 		throw new ServiceUnavailableException(messageUtil.getMessage("external.service.unavailable", "Subsidy"));
+	}
+
+	@CircuitBreaker(name = "programSubsidyService", fallbackMethod = "updateProgramStatusFallback")
+	public ResponseEntity<SubsidyResponse> updateSubsidy(SubsidyUpdateRequest requestBody, Long subsidyId) {
+		try {
+			return programSubsidyFeignClient.updateSubsidy(requestBody, subsidyId);
+		} catch (feign.FeignException.NotFound ex) {
+			throw new ProgramNotFoundException(messageUtil.getMessage("not.found.message", "Program", subsidyId));
+		}
+	}
+
+	@SuppressWarnings("unused")
+	private ResponseEntity<FinancialProgramResponse> updateProgramStatusFallback(Long id, Throwable ex) {
+
+		log.error("Program update service error for id={}", id, ex);
+
+		if (ex instanceof ProgramNotFoundException pnfe) {
+			throw pnfe;
+		}
+
+		throw new ServiceUnavailableException(messageUtil.getMessage("external.service.unavailable", "Program"));
 	}
 }

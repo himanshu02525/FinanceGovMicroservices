@@ -163,10 +163,7 @@ public class AuditServiceImpl implements AuditService {
 	@Override
 	public String delete(long auditId) {
 		log.info("Attempting to delete audit record ID: {}", auditId);
-
-		// Reusing findById to ensure record exists and leverage its logging
 		findById(auditId);
-
 		repository.deleteById(auditId);
 
 		log.info("Audit record ID: {} deleted successfully from database", auditId);

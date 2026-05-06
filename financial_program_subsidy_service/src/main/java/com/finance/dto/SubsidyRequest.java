@@ -22,7 +22,6 @@ public class SubsidyRequest {
     // Optional: if not provided, defaults to LocalDate.now() in service
     private LocalDate date;
     
-    private String status;
     
     private Long userId;
 }

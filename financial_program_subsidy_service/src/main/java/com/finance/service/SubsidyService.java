@@ -6,6 +6,7 @@ import java.util.Map;
 
 import com.finance.dto.SubsidyRequest;
 import com.finance.dto.SubsidyResponse;
+import com.finance.dto.SubsidyUpdateRequest;
 
 public interface SubsidyService {
     SubsidyResponse saveSubsidy(SubsidyRequest request);
@@ -21,5 +22,5 @@ public interface SubsidyService {
     Map<String, Object> getSubsidySummary();
 //	SubsidyResponse approveSubsidy(Long subsidyId, Long userId, String email);
 	
-
+    SubsidyResponse updateSubsidy(SubsidyUpdateRequest requestBody,Long subsidyId);
 }

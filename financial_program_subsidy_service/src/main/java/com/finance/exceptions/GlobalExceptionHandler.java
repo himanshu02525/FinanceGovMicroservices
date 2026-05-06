@@ -21,35 +21,39 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(ProgramNotFoundException.class)
 	public ResponseEntity<Map<String, Object>> handleProgramNotFound(ProgramNotFoundException ex) {
-	    Map<String, Object> error = new HashMap<>();
-	    error.put("timestamp", Instant.now());
-	    error.put("status", HttpStatus.NOT_FOUND.value());
-	    error.put("error", "Program Not Found");
-	    error.put("message", ex.getMessage());
-	    return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+		Map<String, Object> error = new HashMap<>();
+		error.put("timestamp", Instant.now());
+		error.put("status", HttpStatus.NOT_FOUND.value());
+		error.put("error", "Program Not Found");
+		error.put("message", ex.getMessage());
+		return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+	}
+
+	@ExceptionHandler(InvalidStatusTransitionException.class)
+	public ResponseEntity<Object> handleInvalidTransition(InvalidStatusTransitionException ex) {
+		Map<String, Object> body = new HashMap<>();
+		body.put("timestamp", LocalDateTime.now());
+		body.put("message", ex.getMessage());
+		body.put("error", "Unprocessable Entity");
+
+		return new ResponseEntity<>(body, HttpStatus.UNPROCESSABLE_CONTENT);
 	}
 
 	@ExceptionHandler(ConstraintViolationException.class)
-	public ResponseEntity<Map<String, Object>> handleConstraintViolation(
-	        ConstraintViolationException ex) {
+	public ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException ex) {
 
-	    Map<String, Object> error = new HashMap<>();
-	    error.put("timestamp", LocalDateTime.now());
-	    error.put("status", HttpStatus.BAD_REQUEST.value());
-	    error.put("error", "Bad Request");
+		Map<String, Object> error = new HashMap<>();
+		error.put("timestamp", LocalDateTime.now());
+		error.put("status", HttpStatus.BAD_REQUEST.value());
+		error.put("error", "Bad Request");
 
-	    // ✅ Extract ONLY the validation messages
-	    String message = ex.getConstraintViolations()
-	            .iterator()
-	            .next()
-	            .getMessage();
+		// ✅ Extract ONLY the validation messages
+		String message = ex.getConstraintViolations().iterator().next().getMessage();
 
-	    error.put("message", message);
+		error.put("message", message);
 
-	    return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+		return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
 	}
-
-	
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<Map<String, Object>> handleGeneralException(Exception ex) {
@@ -58,78 +62,64 @@ public class GlobalExceptionHandler {
 		error.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
 		error.put("error", "Internal Server Error");
 		error.put("message", ex.getMessage());
-		return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);  //HTTP 500
+		return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR); // HTTP 500
 	}
-	
 
-	 @ExceptionHandler(SubsidyNotFoundException.class)
-	    public ResponseEntity<Object> handleSubsidyNotFound(SubsidyNotFoundException ex) {
-	        Map<String, Object> body = new HashMap<>();
-	        body.put("timestamp", LocalDateTime.now());
-	        body.put("status", HttpStatus.NOT_FOUND.value());
-	        body.put("error", "Not Found");
-	        body.put("message", ex.getMessage());
+	@ExceptionHandler(SubsidyNotFoundException.class)
+	public ResponseEntity<Object> handleSubsidyNotFound(SubsidyNotFoundException ex) {
+		Map<String, Object> body = new HashMap<>();
+		body.put("timestamp", LocalDateTime.now());
+		body.put("status", HttpStatus.NOT_FOUND.value());
+		body.put("error", "Not Found");
+		body.put("message", ex.getMessage());
 
-	        return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
-	    }
-	 
-	 
-	 @ExceptionHandler(MethodArgumentNotValidException.class)
-	 public ResponseEntity<Map<String, Object>> handleMethodArgumentNotValid(
-	         MethodArgumentNotValidException ex,
-	         HttpServletRequest request) {
+		return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
+	}
 
-	     Map<String, Object> error = new HashMap<>();
-	     error.put("timestamp", LocalDateTime.now());
-	     error.put("status", HttpStatus.BAD_REQUEST.value());
-	     error.put("error", "Bad Request");
-	     error.put("message", "Validation failed. Please review the request.");
+	@ExceptionHandler(MethodArgumentNotValidException.class)
+	public ResponseEntity<Map<String, Object>> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
+			HttpServletRequest request) {
 
-	     // Collect field-level validation errors
-	     List<Map<String, String>> details = new ArrayList<>();
+		Map<String, Object> error = new HashMap<>();
+		error.put("timestamp", LocalDateTime.now());
+		error.put("status", HttpStatus.BAD_REQUEST.value());
+		error.put("error", "Bad Request");
+		error.put("message", "Validation failed. Please review the request.");
 
-	     ex.getBindingResult().getFieldErrors().forEach(fieldError -> {
-	         Map<String, String> fieldMap = new HashMap<>();
-	         fieldMap.put("field", fieldError.getField());
-	         fieldMap.put("message", fieldError.getDefaultMessage());
-	         details.add(fieldMap);
-	     });
+		// Collect field-level validation errors
+		List<Map<String, String>> details = new ArrayList<>();
 
-	     error.put("details", details);
-	     error.put("path", request.getRequestURI());
+		ex.getBindingResult().getFieldErrors().forEach(fieldError -> {
+			Map<String, String> fieldMap = new HashMap<>();
+			fieldMap.put("field", fieldError.getField());
+			fieldMap.put("message", fieldError.getDefaultMessage());
+			details.add(fieldMap);
+		});
 
-	     return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
-	 }
-	 
-	 
-	 
-	 @ExceptionHandler(ApplicationNotFoundException.class)
-	    public ResponseEntity<String> handleNotFound(ApplicationNotFoundException ex) {
-	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
-	    }
+		error.put("details", details);
+		error.put("path", request.getRequestURI());
 
-	    @ExceptionHandler(IllegalStateException.class)
-	    public ResponseEntity<String> handleIllegalState(IllegalStateException ex) {
-	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
-	    }
-	    
-	   
-	 
-	    @ExceptionHandler(EntityNotFoundException.class)
-	    public ResponseEntity<String> handleEntityNotFound(EntityNotFoundException ex) {
-	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
-	    }
+		return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+	}
 
-	    
-	    @ExceptionHandler(NoSubsidiesFoundException.class)
-	    public ResponseEntity<String> handleNoSubsidiesFound(NoSubsidiesFoundException ex) {
-	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
-	    }
+	@ExceptionHandler(ApplicationNotFoundException.class)
+	public ResponseEntity<String> handleNotFound(ApplicationNotFoundException ex) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+	}
 
-	    
-	    
-	    
-	    
+	@ExceptionHandler(IllegalStateException.class)
+	public ResponseEntity<String> handleIllegalState(IllegalStateException ex) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+	}
 
+	@ExceptionHandler(EntityNotFoundException.class)
+	public ResponseEntity<String> handleEntityNotFound(EntityNotFoundException ex) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+	}
+
+	@ExceptionHandler(NoSubsidiesFoundException.class)
+	public ResponseEntity<String> handleNoSubsidiesFound(NoSubsidiesFoundException ex) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+	}
 
 }

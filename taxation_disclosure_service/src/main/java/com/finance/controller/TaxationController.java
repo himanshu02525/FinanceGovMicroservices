@@ -20,6 +20,9 @@ import com.finance.service.TaxationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RestController
 
 @RequestMapping("/api/taxation")
@@ -28,66 +31,47 @@ import lombok.RequiredArgsConstructor;
 
 public class TaxationController {
 
-	private final TaxationService taxationService;
+    private final TaxationService taxationService;
 
-	@PostMapping("/enter_taxrecord")
+    @PostMapping("/enter_taxrecord")
+    public ResponseEntity<TaxResponseDTO> createTaxRecord(@Valid @RequestBody TaxRequestDTO request) {
+        log.info("REST request to create TaxRecord for Entity ID: {}", request.getEntityId());
+        TaxResponseDTO response = taxationService.createTaxRecord(request);
+        log.info("Successfully created TaxRecord with ID: {}", response.getTaxId());
+        return ResponseEntity.ok(response);
+    }
 
-	public ResponseEntity<TaxResponseDTO> createTaxRecord(@Valid @RequestBody TaxRequestDTO request) {
+    @GetMapping("/taxrecords/{taxId}")
+    public ResponseEntity<TaxResponseDTO> getTaxRecordByTaxId(@PathVariable Long taxId) {
+        log.info("REST request to get TaxRecord by ID: {}", taxId);
+        return ResponseEntity.ok(taxationService.getTaxRecordByTaxId(taxId));
+    }
 
-		// Triggers creation logic and catches validation errors via
-		// GlobalExceptionHandler
+    @GetMapping("/all_taxrecords")
+    public ResponseEntity<List<TaxResponseDTO>> getAllRecords() {
+        log.info("REST request to get all tax records for audit");
+        List<TaxResponseDTO> records = taxationService.getAllTaxRecords();
+        log.debug("Returning {} tax records", records.size());
+        return ResponseEntity.ok(records);
+    }
 
-		return ResponseEntity.ok(taxationService.createTaxRecord(request));
+    @GetMapping("/tax/summary")
+    public ResponseEntity<Map<String, Object>> getTaxStatistics() {
+        log.info("REST request to get aggregated tax statistics");
+        return ResponseEntity.ok(taxationService.getTaxStatistics());
+    }
 
-	}
+    @GetMapping("/taxrecords/entity/{entityId}")
+    public ResponseEntity<List<TaxResponseDTO>> getTaxRecordsByEntityId(@PathVariable("entityId") Long entityId) {
+        log.info("REST request to get all tax records for Entity ID: {}", entityId);
+        return ResponseEntity.ok(taxationService.getAllTaxRecordsByEntityId(entityId));
+    }
 
-	@GetMapping("/taxrecords/{taxId}")
-
-	public ResponseEntity<TaxResponseDTO> getTaxRecordByTaxId(@PathVariable Long taxId) {
-
-		// Returns 200 OK or 404 via custom exception
-
-		return ResponseEntity.ok(taxationService.getTaxRecordByTaxId(taxId));
-
-	}
-
-	@GetMapping("/all_taxrecords")
-
-	public ResponseEntity<List<TaxResponseDTO>> getAllRecords() {
-
-		// Returns list of all tax entries for government audit
-
-		return ResponseEntity.ok(taxationService.getAllTaxRecords());
-
-	}
-
-	@GetMapping("/tax/summary")
-
-	public ResponseEntity<Map<String, Object>> getTaxStatistics() {
-
-		// Provides aggregated fiscal data for management oversight
-
-		return ResponseEntity.ok(taxationService.getTaxStatistics());
-
-	}
-
-	@GetMapping("/taxrecords/entity/{entityId}")
-
-	public ResponseEntity<List<TaxResponseDTO>> getTaxRecordsByEntityId(@PathVariable("entityId") Long entityId) {
-
-		return ResponseEntity.ok(taxationService.getAllTaxRecordsByEntityId(entityId));
-
-	}
-
-	@PutMapping("/taxrecords/verify/{taxId}")
-
-	public ResponseEntity<TaxResponseDTO> verifySingleTax(@PathVariable Long taxId,
-			@RequestBody TaxUpdateDTO taxUpdateDTO) {
-
-		// Approves or rejects a single record by a financial officer
-
-		return ResponseEntity.ok(taxationService.verifyTaxRecordByTaxId(taxId, taxUpdateDTO));
-
-	}
-
+    @PutMapping("/taxrecords/verify/{taxId}")
+    public ResponseEntity<TaxResponseDTO> verifySingleTax(@PathVariable Long taxId, @RequestBody TaxUpdateDTO taxUpdateDTO) {
+        log.info("REST request to verify TaxRecord ID: {} with status: {}", taxId, taxUpdateDTO.getStatus());
+        TaxResponseDTO response = taxationService.verifyTaxRecordByTaxId(taxId, taxUpdateDTO);
+        log.info("TaxRecord ID: {} verification completed. New status: {}", taxId, response.getStatus());
+        return ResponseEntity.ok(response);
+    }
 }

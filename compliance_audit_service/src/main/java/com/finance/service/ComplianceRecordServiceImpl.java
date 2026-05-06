@@ -18,10 +18,12 @@ import com.finance.dto.ComplianceResponse;
 import com.finance.dto.ComplianceUpdateRequest;
 import com.finance.dto.FinancialProgramResponse;
 import com.finance.dto.SubsidyResponse;
+import com.finance.dto.SubsidyUpdateRequest;
 import com.finance.dto.TaxResponseDTO;
 import com.finance.dto.TaxUpdateDTO;
 import com.finance.enums.ComplianceRecordResult;
 import com.finance.enums.ComplianceRecordType;
+import com.finance.enums.SubsidyStatus;
 import com.finance.enums.TaxStatus;
 import com.finance.exceptions.AuditStatusConflictException;
 import com.finance.exceptions.ComplianceNotFoundException;
@@ -172,8 +174,9 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 		complianceRecord.setResult(body.getResult());
 
 		log.info(" Triggering external data sync for RefID: {}", complianceRecord.getReferenceID());
-		updateRelaventData(complianceRecord.getType(), complianceRecord.getReferenceID(), body.getResult());
-
+		if (body.getResult() == ComplianceRecordResult.FAIL || body.getResult() == ComplianceRecordResult.PASS) {
+			updateRelaventData(complianceRecord.getType(), complianceRecord.getReferenceID(), body.getResult());
+		}
 		ComplianceRecord updated = repository.save(complianceRecord);
 		log.info(" Compliance record {} successfully updated in database", complianceId);
 		return modelMapper.map(updated, ComplianceResponse.class);
@@ -221,9 +224,16 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 		}
 		case SUBSIDY -> {
 			try {
+				SubsidyUpdateRequest subsidyUpdateRequest = new SubsidyUpdateRequest();
 
-				programSubsidyFeignClient.getSubsidyById(refId);
-				programSubsidyFeignClient.updateStatus(refId);
+				ResponseEntity<SubsidyResponse> subsidy = programSubsidyFeignClient.getSubsidyById(refId);
+				if (complianceRecordResult == ComplianceRecordResult.FAIL) {
+					subsidyUpdateRequest.setStatus(SubsidyStatus.CANCELLED);
+
+				} else if (complianceRecordResult == ComplianceRecordResult.PASS) {
+					subsidyUpdateRequest.setStatus(SubsidyStatus.GRANTED);
+				}
+				programSubsidyFeignClient.updateSubsidy(subsidyUpdateRequest, refId);
 				log.info("[SubsidySync] Successfully updated Subsidy status for RefID: {}", refId);
 			} catch (SubsidyNotFoundException | ServiceUnavailableException ex) {
 				log.error("[SubsidySync] External service error during sync: {}", ex.getMessage());

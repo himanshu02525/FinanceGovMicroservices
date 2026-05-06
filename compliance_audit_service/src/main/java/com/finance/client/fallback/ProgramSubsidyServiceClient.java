@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import com.finance.client.ProgramSubsidyFeignClient;
 import com.finance.dto.FinancialProgramResponse;
 import com.finance.dto.SubsidyResponse;
+import com.finance.dto.SubsidyUpdateRequest;
 import com.finance.exceptions.ProgramNotFoundException;
 import com.finance.exceptions.ServiceUnavailableException;
 import com.finance.exceptions.SubsidyNotFoundException;
@@ -66,11 +67,11 @@ public class ProgramSubsidyServiceClient {
 	}
 
 	@CircuitBreaker(name = "programSubsidyService", fallbackMethod = "updateProgramStatusFallback")
-	public ResponseEntity<FinancialProgramResponse> updateStatus(Long id) {
+	public ResponseEntity<SubsidyResponse> updateSubsidy(SubsidyUpdateRequest requestBody, Long subsidyId) {
 		try {
-			return programSubsidyFeignClient.getProgramById(id);
+			return programSubsidyFeignClient.updateSubsidy(requestBody, subsidyId);
 		} catch (feign.FeignException.NotFound ex) {
-			throw new ProgramNotFoundException(messageUtil.getMessage("not.found.message", "Program", id));
+			throw new ProgramNotFoundException(messageUtil.getMessage("not.found.message", "Program", subsidyId));
 		}
 	}
 

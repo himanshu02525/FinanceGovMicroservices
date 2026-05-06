@@ -25,6 +25,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .addFilterAt(jwtAuthenticationWebFilter, SecurityWebFiltersOrder.AUTHENTICATION)
             .authorizeExchange(auth -> auth
+            		
+            		.pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                 /* =====================================================
                  * 1. PUBLIC ENDPOINTS (Strict & Explicit)

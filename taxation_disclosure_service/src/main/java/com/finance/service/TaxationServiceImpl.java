@@ -1,5 +1,6 @@
 package com.finance.service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Year;
 import java.util.HashMap;
@@ -99,42 +100,59 @@ public class TaxationServiceImpl implements TaxationService {
 		TaxStatus currentStatus = record.getStatus();
 		TaxStatus requestedStatus = taxUpdateDTO.getStatus();
 
-		// ---- VALID STATE TRANSITIONS ----
-		if (currentStatus == TaxStatus.PENDING && requestedStatus == TaxStatus.VERIFIED
-				|| requestedStatus == TaxStatus.REJECTED) {
+		// ----- STATE TRANSITIONS -----
+		if (currentStatus == TaxStatus.PENDING) {
 
-			record.setStatus(taxUpdateDTO.getStatus());
+			if (requestedStatus != TaxStatus.VERIFIED_INITIAL) {
+				throw new InvalidTaxStatusTransitionException("Invalid transition from PENDING to " + requestedStatus);
+			}
 
-			// ✅ Create Compliance Record on Verification
+			// Update status
+			record.setStatus(TaxStatus.VERIFIED_INITIAL);
+
+			// ✅ Generate Compliance Record on Initial Verification
 			ComplianceCreateRequest complianceCreateRequest = new ComplianceCreateRequest();
 			complianceCreateRequest.setEntityId(record.getEntityId());
 			complianceCreateRequest.setReferenceId(record.getTaxId());
-			log.error(record.getTaxId() + "Here is id");
 			complianceCreateRequest.setType(ComplianceRecordType.TAX);
 			complianceCreateRequest.setNotes(
-					"Tax record verified by the Financial Officer. Please confirm whether the citizen filed the tax on time.");
+					"Tax record verified initially by the Financial Officer. Please confirm whether the citizen filed the tax on time.");
 			complianceFeignClient.create(complianceCreateRequest);
+		} else if (currentStatus == TaxStatus.VERIFIED_INITIAL) {
 
-		} else if (currentStatus == TaxStatus.VERIFIED
-				&& (requestedStatus == TaxStatus.PAID || requestedStatus == TaxStatus.OVERDUE)) {
+			if (requestedStatus == TaxStatus.VERIFIED_FINAL) {
 
-			record.setStatus(requestedStatus);
+				LocalDate createdDate = record.getCreatedAt().toLocalDate();
+				LocalDate dueDate = LocalDate.of(createdDate.getYear(), 3, 30);
+
+				if (createdDate.isAfter(dueDate)) {
+				    record.setStatus(TaxStatus.OVERDUE);
+				} else {
+				    record.setStatus(TaxStatus.PAID);
+				}
+			} else if (requestedStatus == TaxStatus.REJECTED) {
+				record.setStatus(TaxStatus.REJECTED);
+
+			} else {
+				throw new InvalidTaxStatusTransitionException(
+						"Invalid transition from VERIFIED_INITIAL to " + requestedStatus);
+			}
 
 		} else {
 			throw new InvalidTaxStatusTransitionException(
-					"Invalid tax status transition from " + currentStatus + " to " + requestedStatus);
+					"Tax record is already finalized with status: " + currentStatus);
 		}
 
 		TaxRecord saved = taxRepository.save(record);
 
-		// ---- NOTIFICATIONS (PAID / OVERDUE ONLY) ----
+		// ----- NOTIFICATIONS (PAID / OVERDUE ONLY) -----
 		if (saved.getStatus() == TaxStatus.PAID || saved.getStatus() == TaxStatus.OVERDUE) {
 			try {
 				UserDto user = userFeignClient.getUserById(saved.getEntityId());
 
 				if (user != null && user.getEmail() != null) {
 
-					String message = saved.getStatus() == TaxStatus.PAID ? "Tax payment successful."
+					String message = saved.getStatus() == TaxStatus.PAID ? "Your tax has been successfully paid."
 							: "Your tax payment is overdue. Please pay immediately.";
 
 					NotificationRequestDto notification = NotificationRequestDto.builder().userId(user.getUserId())

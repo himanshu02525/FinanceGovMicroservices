@@ -126,9 +126,9 @@ public class TaxationServiceImpl implements TaxationService {
 				LocalDate dueDate = LocalDate.of(createdDate.getYear(), 3, 30);
 
 				if (createdDate.isAfter(dueDate)) {
-				    record.setStatus(TaxStatus.OVERDUE);
+					record.setStatus(TaxStatus.OVERDUE);
 				} else {
-				    record.setStatus(TaxStatus.PAID);
+					record.setStatus(TaxStatus.PAID);
 				}
 			} else if (requestedStatus == TaxStatus.REJECTED) {
 				record.setStatus(TaxStatus.REJECTED);
@@ -151,15 +151,32 @@ public class TaxationServiceImpl implements TaxationService {
 				UserDto user = userFeignClient.getUserById(saved.getEntityId());
 
 				if (user != null && user.getEmail() != null) {
+					String message = switch (saved.getStatus()) {
 
-					String message = saved.getStatus() == TaxStatus.PAID ? "Your tax has been successfully paid."
-							: "Your tax payment is overdue. Please pay immediately.";
+					case PENDING -> "Your tax submission has been received and is currently under review.";
+
+					case PAID -> "Your tax payment has been successfully completed.";
+
+					case OVERDUE ->
+						"Your tax payment is overdue. Please complete the payment at the earliest to avoid penalties.";
+
+					case REJECTED ->
+						"Your tax submission has been reviewed and requires corrections. Please resubmit with the necessary updates.";
+
+					case VERIFIED_INITIAL ->
+						"Your tax details have passed the initial review and are progressing to the next stage.";
+
+					case VERIFIED_FINAL -> "Your tax details have been fully verified and approved successfully.";
+
+					default -> "Your tax status has been updated. Please check the portal for more details.";
+					};
 
 					NotificationRequestDto notification = NotificationRequestDto.builder().userId(user.getUserId())
 							.entityId(saved.getEntityId()).category(NotificationCategory.TAX).message(message).build();
 
 					notificationFeignClient.sendNotification(notification, user.getEmail());
 				}
+
 			} catch (Exception e) {
 				log.error("Tax notification failed for taxId {}: {}", taxId, e.getMessage());
 			}

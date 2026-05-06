@@ -48,7 +48,7 @@ public class SubsidyServiceImpl implements SubsidyService {
 	private final ComplianceFeignClient complianceFeignClient;
 
 	@Override
-	
+
 	public SubsidyResponse saveSubsidy(SubsidyRequest request) {
 		// ✅ Validate citizen externally
 		Boolean isValid = citizenClient.validateCitizen(request.getEntityId());
@@ -155,8 +155,10 @@ public class SubsidyServiceImpl implements SubsidyService {
 
 	@Override
 	public SubsidyResponse updateSubsidy(SubsidyUpdateRequest requestBody, Long subsidyId) {
+
 		Subsidy subsidy = subsidyRepository.findById(subsidyId)
 				.orElseThrow(() -> new SubsidyNotFoundException(subsidyId));
+
 		SubsidyStatus currentStatus = subsidy.getStatus();
 		SubsidyStatus newStatus = requestBody.getStatus();
 
@@ -168,10 +170,10 @@ public class SubsidyServiceImpl implements SubsidyService {
 			subsidy.setStatus(newStatus);
 		} else {
 			throw new InvalidStatusTransitionException(
-					"Invalid transition to " + newStatus + ". From VERIFIED, you may only move to GRANTED or ONHOLD.");
+					"Invalid transition to " + newStatus + ". From VERIFIED, allowed statuses are GRANTED or ONHOLD.");
 		}
-
-		return mapToResponse(subsidyRepository.save(subsidy));
+		Subsidy updatedSubsidy = subsidyRepository.save(subsidy);
+		return mapToResponse(updatedSubsidy);
 	}
 
 	private SubsidyResponse mapToResponse(Subsidy subsidy) {

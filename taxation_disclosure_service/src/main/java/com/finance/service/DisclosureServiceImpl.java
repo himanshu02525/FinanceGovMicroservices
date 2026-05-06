@@ -37,15 +37,19 @@ public class DisclosureServiceImpl implements DisclosureService {
     @Override
     @Transactional
     public DisclosureResponseDTO processDisclosure(DisclosureCreateRequestDTO request) {
+        log.info("Starting disclosure processing for Entity ID: {} with type: {}", request.getEntityId(), request.getType());
 
         boolean exists;
         try {
             exists = citizenClient.validateCitizen(request.getEntityId());
+            log.debug("Citizen validation result for Entity ID {}: {}", request.getEntityId(), exists);
         } catch (Exception e) {
+            log.error("Failed to connect to Citizen Service for Entity ID {}: {}", request.getEntityId(), e.getMessage());
             throw new EntityNotFoundException("Entity ID " + request.getEntityId() + " not found.");
         }
 
         if (!exists) {
+            log.warn("Disclosure processing aborted: Entity ID {} does not exist.", request.getEntityId());
             throw new EntityNotFoundException("Entity ID " + request.getEntityId() + " not found.");
         }
 
@@ -56,9 +60,12 @@ public class DisclosureServiceImpl implements DisclosureService {
         disclosure.setSubmissionDate(LocalDateTime.now());
 
         Disclosure saved = disclosureRepository.save(disclosure);
+        log.info("Disclosure record saved with ID: {} and status: {}", saved.getDisclosureId(), saved.getStatus());
 
         try {
+            log.debug("Fetching user details for notification for Entity ID: {}", saved.getEntityId());
             UserDto user = userFeignClient.getUserById(saved.getEntityId());
+            
             if (user != null && user.getEmail() != null) {
                 NotificationRequestDto notification = NotificationRequestDto.builder()
                         .userId(user.getUserId())
@@ -68,6 +75,9 @@ public class DisclosureServiceImpl implements DisclosureService {
                         .build();
 
                 notificationFeignClient.sendNotification(notification, user.getEmail());
+                log.info("Submission notification sent to email: {}", user.getEmail());
+            } else {
+                log.warn("Notification skipped: User or email not found for Entity ID: {}", saved.getEntityId());
             }
         } catch (Exception e) {
             log.error("Notification failed for entity {}: {}", saved.getEntityId(), e.getMessage());
@@ -79,14 +89,17 @@ public class DisclosureServiceImpl implements DisclosureService {
     @Override
     @Transactional
     public List<DisclosureResponseDTO> getAllDisclosuresByEntityId(Long entityId) {
+        log.info("Fetching all disclosures for Entity ID: {}", entityId);
 
         List<Disclosure> list = disclosureRepository.findByEntityId(entityId);
 
         if (list.isEmpty()) {
+            log.warn("No disclosure records found in database for Entity ID: {}", entityId);
             throw new EntityNotFoundException(
                     "No disclosure records found for Entity ID: " + entityId);
         }
 
+        log.debug("Found {} disclosure records for Entity ID: {}", list.size(), entityId);
         return list.stream()
                 .map(this::mapToResponseDTO)
                 .collect(Collectors.toList());
@@ -94,18 +107,23 @@ public class DisclosureServiceImpl implements DisclosureService {
 
     @Override
     @Transactional
-    public DisclosureResponseDTO validateSingleDisclosure(
-            Long disclosureId, DisclosureStatus newStatus) {
+    public DisclosureResponseDTO validateSingleDisclosure(Long disclosureId, DisclosureStatus newStatus) {
+        log.info("Attempting to update Disclosure ID: {} to status: {}", disclosureId, newStatus);
 
         Disclosure disclosure = disclosureRepository.findById(disclosureId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Disclosure record not found."));
+                .orElseThrow(() -> {
+                    log.error("Validation failed: Disclosure ID {} not found", disclosureId);
+                    return new ResourceNotFoundException("Disclosure record not found.");
+                });
 
         disclosure.setStatus(newStatus);
         Disclosure saved = disclosureRepository.save(disclosure);
+        log.info("Disclosure ID: {} updated successfully to {}", disclosureId, newStatus);
 
         try {
+            log.debug("Fetching user details for status update notification for Entity ID: {}", saved.getEntityId());
             UserDto user = userFeignClient.getUserById(saved.getEntityId());
+            
             if (user != null && user.getEmail() != null) {
                 String msg = (newStatus == DisclosureStatus.VALIDATED)
                         ? "Disclosure Validated: Your record has been approved."
@@ -119,10 +137,10 @@ public class DisclosureServiceImpl implements DisclosureService {
                         .build();
 
                 notificationFeignClient.sendNotification(notification, user.getEmail());
+                log.info("Status update notification sent to {} for Disclosure ID: {}", user.getEmail(), disclosureId);
             }
         } catch (Exception e) {
-            log.error("Single notification failed for disclosure {}: {}",
-                    disclosureId, e.getMessage());
+            log.error("Single notification failed for disclosure {}: {}", disclosureId, e.getMessage());
         }
 
         return mapToResponseDTO(saved);
@@ -130,6 +148,7 @@ public class DisclosureServiceImpl implements DisclosureService {
 
     @Override
     public List<DisclosureResponseDTO> getAllDisclosures() {
+        log.debug("Fetching all disclosures across the system.");
         return disclosureRepository.findAll()
                 .stream()
                 .map(this::mapToResponseDTO)
@@ -138,10 +157,13 @@ public class DisclosureServiceImpl implements DisclosureService {
 
     @Override
     public DisclosureResponseDTO getDisclosureByDisclosureId(Long id) {
+        log.debug("Fetching details for Disclosure ID: {}", id);
 
         Disclosure d = disclosureRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Disclosure " + id + " not found"));
+                .orElseThrow(() -> {
+                    log.warn("Disclosure ID {} not found in database.", id);
+                    return new ResourceNotFoundException("Disclosure " + id + " not found");
+                });
 
         return mapToResponseDTO(d);
     }

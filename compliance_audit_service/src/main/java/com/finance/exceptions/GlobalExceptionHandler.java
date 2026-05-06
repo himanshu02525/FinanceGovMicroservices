@@ -9,7 +9,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
+import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 @RestControllerAdvice
 @Slf4j
@@ -51,25 +54,25 @@ public class GlobalExceptionHandler {
 	 * =================
 	 */
 
-//	@ExceptionHandler(FeignException.class)
-//	public ResponseEntity<Object> handleRawFeignException(FeignException ex) {
-//		log.error("Unhandled Feign client error: Status {}, Message: {}", ex.status(), ex.getMessage());
-//
-//		String responseBody = ex.contentUTF8();
-//		String friendlyMessage = "Remote service error";
-//
-//		if (responseBody != null && !responseBody.isEmpty()) {
-//			try {
-//				JsonNode node = new ObjectMapper().readTree(responseBody);
-//				friendlyMessage = node.has("message") ? node.get("message").asText() : responseBody;
-//			} catch (Exception e) {
-//				friendlyMessage = responseBody;
-//			}
-//		}
-//
-//		HttpStatus status = HttpStatus.resolve(ex.status());
-//		return buildResponse(friendlyMessage, status != null ? status : HttpStatus.SERVICE_UNAVAILABLE);
-//	}
+	@ExceptionHandler(FeignException.class)
+	public ResponseEntity<Object> handleRawFeignException(FeignException ex) {
+		log.error("Unhandled Feign client error: Status {}, Message: {}", ex.status(), ex.getMessage());
+
+		String responseBody = ex.contentUTF8();
+		String friendlyMessage = "Remote service error";
+
+		if (responseBody != null && !responseBody.isEmpty()) {
+			try {
+				JsonNode node = new ObjectMapper().readTree(responseBody);
+				friendlyMessage = node.has("message") ? node.get("message").asText() : responseBody;
+			} catch (Exception e) {
+				friendlyMessage = responseBody;
+			}
+		}
+
+		HttpStatus status = HttpStatus.resolve(ex.status());
+		return buildResponse(friendlyMessage, status != null ? status : HttpStatus.SERVICE_UNAVAILABLE);
+	}
 
 	/* ================= GENERIC FALLBACK (500) ================= */
 

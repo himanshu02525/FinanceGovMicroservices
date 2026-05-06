@@ -15,7 +15,7 @@ public interface ProgramSubsidyFeignClient {
 	ResponseEntity<FinancialProgramResponse> getProgramById(@PathVariable Long programId);
 
 	@GetMapping("/subsidies/fetch/{subsidyId}")
-	ResponseEntity<SubsidyResponse> getSubsidyById(@PathVariable Long subsidyId);
+	ResponseEntity<SubsidyResponse> getSubsidyById(@PathVariable("subsidyId") Long subsidyId);
 
 	@GetMapping("/subsidies/fetch/{subsidyId}")
 	ResponseEntity<SubsidyResponse> updateStatus(@PathVariable Long subsidyId);

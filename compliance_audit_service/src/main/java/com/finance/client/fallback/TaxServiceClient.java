@@ -1,5 +1,6 @@
 package com.finance.client.fallback;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -10,6 +11,7 @@ import com.finance.exceptions.ServiceUnavailableException;
 import com.finance.exceptions.TaxRecordNotFoundException;
 import com.finance.util.MessageUtil;
 
+import feign.FeignException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,23 +26,17 @@ public class TaxServiceClient {
 
 	@CircuitBreaker(name = "taxService", fallbackMethod = "getTaxFallback")
 	public ResponseEntity<TaxResponseDTO> getTaxById(Long taxId) {
-		try {
-			return taxFeignClient.getTaxById(taxId);
-		} catch (feign.FeignException.NotFound ex) {
-			throw new TaxRecordNotFoundException(messageUtil.getMessage("not.found.message", "Tax", taxId));
-		}
+		return taxFeignClient.getTaxById(taxId);
 	}
 
-	@SuppressWarnings("unused")
-	private ResponseEntity<TaxResponseDTO> getTaxFallback(Long taxId, Throwable ex) {
+	public ResponseEntity<TaxResponseDTO> getTaxFallback(Long taxId, Throwable ex) {
 
-		log.error("Tax service failure for taxId={}", taxId, ex);
-
-		if (ex instanceof TaxRecordNotFoundException tnfe) {
-			throw tnfe;
+		if (ex instanceof FeignException.NotFound) {
+			throw new TaxRecordNotFoundException("Tax record not found for ID: " + taxId);
 		}
 
-		throw new ServiceUnavailableException(messageUtil.getMessage("external.service.unavailable", "Taxation"));
+		// Other failures (service down, timeout, etc.)
+		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
 	}
 
 	@CircuitBreaker(name = "taxService", fallbackMethod = "getTaxStatusUpdateFallback")

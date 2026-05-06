@@ -13,8 +13,8 @@ import com.finance.dto.TaxUpdateDTO;
 @FeignClient(name = "taxation-disclosure-service")
 public interface TaxFeignClient {
 
-	@GetMapping("api/taxation/taxerecords/{taxID}")
-	ResponseEntity<TaxResponseDTO> getTaxById(@PathVariable Long taxID);
+	@GetMapping("api/taxation/taxrecords/{taxId}")
+	ResponseEntity<TaxResponseDTO> getTaxById(@PathVariable Long taxId);
 
 	@PutMapping("/api/taxation/taxrecords/verify/{taxId}")
 	ResponseEntity<TaxResponseDTO> verifySingleTax(@PathVariable Long taxId, @RequestBody TaxUpdateDTO taxUpdateDTO);

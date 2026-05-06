@@ -1,7 +1,6 @@
 package com.finance.client;
 
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import com.finance.dto.TaxResponseDTO;
@@ -10,5 +9,5 @@ import com.finance.dto.TaxResponseDTO;
 public interface TaxFeignClient {
 
 	@GetMapping("taxation/taxerecords/{taxID}")
-	ResponseEntity<TaxResponseDTO> getTaxById(Long ref);
+	TaxResponseDTO getTaxById(Long ref);
 }

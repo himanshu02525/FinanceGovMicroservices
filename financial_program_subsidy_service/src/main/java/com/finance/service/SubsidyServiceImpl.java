@@ -48,6 +48,7 @@ public class SubsidyServiceImpl implements SubsidyService {
 	private final ComplianceFeignClient complianceFeignClient;
 
 	@Override
+	
 	public SubsidyResponse saveSubsidy(SubsidyRequest request) {
 		// ✅ Validate citizen externally
 		Boolean isValid = citizenClient.validateCitizen(request.getEntityId());

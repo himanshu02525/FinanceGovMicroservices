@@ -10,7 +10,7 @@ public class SecurityContextConfig {
 
     @Bean
     public ServerSecurityContextRepository securityContextRepository() {
-        // ✅ Stateless: no session, no cookie, no carry-over auth
+        //  Stateless: no session, no cookie, no carry-over auth
         return NoOpServerSecurityContextRepository.getInstance();
     }
 }

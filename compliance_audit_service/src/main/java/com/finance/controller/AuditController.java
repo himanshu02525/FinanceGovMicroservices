@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -20,16 +21,16 @@ import com.finance.dto.AuditUpdateRequest;
 import com.finance.service.AuditService;
 
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/audit")
+
+@CrossOrigin("*")
 public class AuditController {
 
 	private final AuditService service;
-
-	public AuditController(AuditService service) {
-		this.service = service;
-	}
 
 	@GetMapping
 	public ResponseEntity<List<AuditResponse>> getAll() {
@@ -57,9 +58,8 @@ public class AuditController {
 	}
 
 	@DeleteMapping("/{id}")
-	public ResponseEntity<Void> delete(@PathVariable long id) {
-		service.delete(id);
-		return ResponseEntity.noContent().build();
+	public ResponseEntity<String> delete(@PathVariable long id) {
+		return ResponseEntity.ok(service.delete(id));
 	}
 
 	@GetMapping("/summary")

@@ -40,9 +40,7 @@ public class EntityDocumentServiceImpl implements EntityDocumentService {
     @Autowired
     private NotificationFeignClient notificationFeignClient;
 
-    // =====================================================
-    // 1️⃣ Document Uploaded
-    // =====================================================
+    // Handles document upload for an entity
     @Override
     public EntityDocumentResponseDTO uploadDocument(Long entityId, EntityDocumentRequestDTO request) {
 
@@ -57,14 +55,9 @@ public class EntityDocumentServiceImpl implements EntityDocumentService {
         doc.setVerificationStatus(VerificationStatus.PENDING);
 
         EntityDocument saved = repository.save(doc);
-
         log.info("Document uploaded for entityId={}, docType={}", entityId, request.getDocType());
 
-        // 🔔 Notification: Document Uploaded
-        notifyCitizen(
-            entity,
-            "Your document has been uploaded and is pending verification"
-        );
+        notifyCitizen(entity, "Your document has been uploaded and is pending verification");
 
         return new EntityDocumentResponseDTO(
                 saved.getDocumentId(),
@@ -76,9 +69,7 @@ public class EntityDocumentServiceImpl implements EntityDocumentService {
         );
     }
 
-    // =====================================================
-    // 2️⃣ Document Verified
-    // =====================================================
+    // Marks a document as verified
     @Override
     public void verifyDocument(Long entityId, DocType docType) {
 
@@ -92,17 +83,10 @@ public class EntityDocumentServiceImpl implements EntityDocumentService {
         repository.save(doc);
 
         log.info("Document verified for entityId={}, docType={}", entityId, docType);
-
-        // 🔔 Notification: Document Verified
-        notifyCitizen(
-            entity,
-            "Your document has been verified successfully"
-        );
+        notifyCitizen(entity, "Your document has been verified successfully");
     }
 
-    // =====================================================
-    // 3️⃣ Document Rejected
-    // =====================================================
+    // Marks a document as rejected
     @Override
     public void rejectDocument(Long entityId, DocType docType) {
 
@@ -116,48 +100,38 @@ public class EntityDocumentServiceImpl implements EntityDocumentService {
         repository.save(doc);
 
         log.info("Document rejected for entityId={}, docType={}", entityId, docType);
-
-        // 🔔 Notification: Document Rejected
-        notifyCitizen(
-            entity,
-            "Your document has been rejected. Please upload a valid document"
-        );
+        notifyCitizen(entity, "Your document has been rejected. Please upload a valid document");
     }
-    //
-    // =====================================================
-    // Common Notification Method
-    // =====================================================
+
+    // Sends notification to the registered user
     private void notifyCitizen(CitizenBusiness entity, String message) {
 
-        Long userId = entity.getUserId();
-        UserDto user = userFeignClient.getUserById(userId);
+        UserDto user = userFeignClient.getUserById(entity.getUserId());
 
         NotificationRequestDto notification =
                 NotificationRequestDto.builder()
-                    .userId(user.getUserId())
-                    .entityId(entity.getEntityId())
-                    .category(NotificationCategory.GENERAL)
-                    .message(message)
-                    .build();
+                        .userId(user.getUserId())
+                        .entityId(entity.getEntityId())
+                        .category(NotificationCategory.GENERAL)
+                        .message(message)
+                        .build();
 
-        notificationFeignClient.sendNotification(
-            notification,
-            user.getEmail()
-        );
-
+        notificationFeignClient.sendNotification(notification, user.getEmail());
         log.info("Notification sent to {}", user.getEmail());
     }
 
-    // =====================================================
-    // Fetch APIs (unchanged)
-    // =====================================================
+    // Retrieves all uploaded documents
     @Override
     public List<EntityDocument> getAllDocuments() {
         return repository.findAll();
     }
 
+    // Updates an existing document
     @Override
-    public EntityDocumentResponseDTO updateDocument(Long entityId, DocType docType, EntityDocumentRequestDTO request) {
+    public EntityDocumentResponseDTO updateDocument(
+            Long entityId,
+            DocType docType,
+            EntityDocumentRequestDTO request) {
 
         CitizenBusiness entity = citizenRepository.findById(entityId)
                 .orElseThrow(() -> new EntityNotFoundException("Entity not found"));

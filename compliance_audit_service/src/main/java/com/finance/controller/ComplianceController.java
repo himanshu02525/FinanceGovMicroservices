@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -20,16 +21,15 @@ import com.finance.dto.ComplianceUpdateRequest;
 import com.finance.service.ComplianceRecordService;
 
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/compliance")
+@RequiredArgsConstructor
+@CrossOrigin("*")
 public class ComplianceController {
 
 	private final ComplianceRecordService service;
-
-	public ComplianceController(ComplianceRecordService service) {
-		this.service = service;
-	}
 
 	@GetMapping
 	public ResponseEntity<List<ComplianceResponse>> getAll() {

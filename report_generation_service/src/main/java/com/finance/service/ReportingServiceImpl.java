@@ -2,6 +2,7 @@ package com.finance.service;
 
 import java.time.LocalDateTime;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -9,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finance.client.SubsidyClient;
 import com.finance.client.TaxClient;
 import com.finance.dto.ReportAnalyticsDTO;
@@ -23,169 +25,137 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ReportingServiceImpl implements ReportingService {
 
-    private static final Logger log =
-            LoggerFactory.getLogger(ReportingServiceImpl.class);
+	private static final Logger log = LoggerFactory.getLogger(ReportingServiceImpl.class);
 
-    private final ReportRepository reportRepository;
-    private final SubsidyClient subsidyClient;
-    private final TaxClient taxClient;
+	private final ReportRepository reportRepository;
+	private final SubsidyClient subsidyClient;
+	private final TaxClient taxClient;
 
-    // Generates a snapshot report based on the requested scope
-    @Override
-    public Report generateReport(ReportScope scope) {
+	private final ObjectMapper objectMapper = new ObjectMapper(); // ✅ for JSON
 
-        log.info("Generating report for scope: {}", scope);
+	// ✅ Generate Report
+	@Override
+	public Report generateReport(ReportScope scope) {
 
-        Report report = new Report();
-        report.setScope(scope);
-        report.setGeneratedDate(LocalDateTime.now());
+		log.info("Generating report for scope: {}", scope);
 
-        if (scope == ReportScope.PROGRAM) {
-            Map<String, Object> program = subsidyClient.getProgramSummary();
+		Report report = new Report();
+		report.setScope(scope);
+		report.setGeneratedDate(LocalDateTime.now());
 
-            report.setTotalPrograms(((Number) program.get("totalPrograms")).intValue());
-            report.setActivePrograms(((Number) program.get("activePrograms")).intValue());
-            report.setBudgetUsed(((Number) program.get("budgetUsed")).doubleValue());
-        }
+		Map<String, Object> metrics = new HashMap<>();
 
-        if (scope == ReportScope.SUBSIDY) {
-            Map<String, Object> subsidy = subsidyClient.getSubsidySummary();
+		try {
 
-            report.setApplicationsReceived(
-                    ((Number) subsidy.get("applicationsReceived")).intValue()
-            );
+			if (scope == ReportScope.PROGRAM) {
+				Map<String, Object> program = subsidyClient.getProgramSummary();
+				metrics.putAll(program);
+			}
 
-            report.setApprovedSubsidies(
-                    ((Number) subsidy.get("approvedSubsidies")).intValue()
-            );
+			if (scope == ReportScope.SUBSIDY) {
+				Map<String, Object> subsidy = subsidyClient.getSubsidySummary();
+				metrics.putAll(subsidy);
+			}
 
-            Number amount = (Number) subsidy.get("amountDistributed");
-            report.setAmountDistributed(amount.doubleValue());
-        }
+			if (scope == ReportScope.TAX) {
+				Map<String, Object> tax = taxClient.getTaxStatistics();
+				metrics.putAll(tax);
+			}
 
-        if (scope == ReportScope.TAX) {
-            Map<String, Object> tax = taxClient.getTaxStatistics();
+			// ✅ Convert Map → JSON String
+			String metricsJson = objectMapper.writeValueAsString(metrics);
+			report.setMetrics(metricsJson);
 
-            report.setTotalTaxpayers(((Number) tax.get("totalTaxpayers")).intValue());
-            report.setRevenueCollected(((Number) tax.get("revenueCollected")).doubleValue());
-        }
+		} catch (Exception e) {
+			log.error("Error generating report metrics", e);
+			throw new RuntimeException("Failed to generate report");
+		}
 
-        return reportRepository.save(report);
-    }
+		return reportRepository.save(report);
+	}
 
-    // Returns all reports generated for a given scope
-    @Override
-    public List<Report> getReportsByScope(ReportScope scope) {
-        return reportRepository.findByScope(scope);
-    }
+	// ✅ Get reports by scope
+	@Override
+	public List<Report> getReportsByScope(ReportScope scope) {
+		return reportRepository.findByScope(scope);
+	}
 
-    // Fetches a single report by its ID
-    @Override
-    public Report getReportById(Long id) {
-        return reportRepository.findById(id)
-                .orElseThrow(() ->
-                        new ReportNotFoundException("Report not found with ID: " + id));
-    }
+	// ✅ Get single report
+	@Override
+	public Report getReportById(Long id) {
+		return reportRepository.findById(id)
+				.orElseThrow(() -> new ReportNotFoundException("Report not found with ID: " + id));
+	}
 
-    // Generates fresh snapshot reports for all scopes
-    @Override
-    public Map<ReportScope, Report> getSummaryReports() {
+	// ✅ Generate all reports
+	@Override
+	public Map<ReportScope, Report> getSummaryReports() {
 
-        Map<ReportScope, Report> summary =
-                new EnumMap<>(ReportScope.class);
+		Map<ReportScope, Report> summary = new EnumMap<>(ReportScope.class);
 
-        summary.put(ReportScope.PROGRAM, generateReport(ReportScope.PROGRAM));
-        summary.put(ReportScope.SUBSIDY, generateReport(ReportScope.SUBSIDY));
-        summary.put(ReportScope.TAX, generateReport(ReportScope.TAX));
+		summary.put(ReportScope.PROGRAM, generateReport(ReportScope.PROGRAM));
+		summary.put(ReportScope.SUBSIDY, generateReport(ReportScope.SUBSIDY));
+		summary.put(ReportScope.TAX, generateReport(ReportScope.TAX));
 
-        return summary;
-    }
+		return summary;
+	}
 
-    // Computes analytics based on the latest snapshot report of each scope
-    @Override
-    public ReportAnalyticsDTO getAnalytics() {
+	@Override
+	public ReportAnalyticsDTO getAnalytics() {
 
-        List<Report> programReports =
-                reportRepository.findByScope(ReportScope.PROGRAM);
+		try {
 
-        List<Report> subsidyReports =
-                reportRepository.findByScope(ReportScope.SUBSIDY);
+			Report programReport = getLatestReport(ReportScope.PROGRAM);
+			Report subsidyReport = getLatestReport(ReportScope.SUBSIDY);
+			Report taxReport = getLatestReport(ReportScope.TAX);
 
-        List<Report> taxReports =
-                reportRepository.findByScope(ReportScope.TAX);
+			Map<String, Object> programMetrics = programReport != null
+					? objectMapper.readValue(programReport.getMetrics(), Map.class)
+					: new HashMap<>();
 
-        Report programReport =
-                programReports.isEmpty()
-                        ? null
-                        : programReports.get(programReports.size() - 1);
+			Map<String, Object> subsidyMetrics = subsidyReport != null
+					? objectMapper.readValue(subsidyReport.getMetrics(), Map.class)
+					: new HashMap<>();
 
-        Report subsidyReport =
-                subsidyReports.isEmpty()
-                        ? null
-                        : subsidyReports.get(subsidyReports.size() - 1);
+			Map<String, Object> taxMetrics = taxReport != null
+					? objectMapper.readValue(taxReport.getMetrics(), Map.class)
+					: new HashMap<>();
 
-        Report taxReport =
-                taxReports.isEmpty()
-                        ? null
-                        : taxReports.get(taxReports.size() - 1);
+			// ✅ Extract values
+			int totalPrograms = ((Number) programMetrics.getOrDefault("totalPrograms", 0)).intValue();
+			int activePrograms = ((Number) programMetrics.getOrDefault("activePrograms", 0)).intValue();
+			double budgetUsed = ((Number) programMetrics.getOrDefault("budgetUsed", 0)).doubleValue();
 
-        double programUtilization = 0;
-        if (programReport != null &&
-            programReport.getTotalPrograms() != null &&
-            programReport.getTotalPrograms() > 0) {
+			int applicationsReceived = ((Number) subsidyMetrics.getOrDefault("applicationsReceived", 0)).intValue();
+			int approvedSubsidies = ((Number) subsidyMetrics.getOrDefault("approvedSubsidies", 0)).intValue();
+			double amountDistributed = ((Number) subsidyMetrics.getOrDefault("amountDistributed", 0)).doubleValue();
 
-            programUtilization =
-                    (programReport.getActivePrograms() * 100.0) /
-                            programReport.getTotalPrograms();
-        }
+			int totalTaxpayers = ((Number) taxMetrics.getOrDefault("totalTaxpayers", 0)).intValue();
+			double revenueCollected = ((Number) taxMetrics.getOrDefault("revenueCollected", 0)).doubleValue();
 
-        double approvalRate = 0;
-        double avgSubsidy = 0;
+			// ✅ Calculations
+			double programUtilization = totalPrograms > 0 ? (activePrograms * 100.0) / totalPrograms : 0;
 
-        if (subsidyReport != null &&
-            subsidyReport.getApplicationsReceived() != null &&
-            subsidyReport.getApplicationsReceived() > 0) {
+			double approvalRate = applicationsReceived > 0 ? (approvedSubsidies * 100.0) / applicationsReceived : 0;
 
-            approvalRate =
-                    (subsidyReport.getApprovedSubsidies() * 100.0) /
-                            subsidyReport.getApplicationsReceived();
+			double avgSubsidy = approvedSubsidies > 0 ? amountDistributed / approvedSubsidies : 0;
 
-            if (subsidyReport.getApprovedSubsidies() != null &&
-                subsidyReport.getApprovedSubsidies() > 0 &&
-                subsidyReport.getAmountDistributed() != null) {
+			double avgRevenue = totalTaxpayers > 0 ? revenueCollected / totalTaxpayers : 0;
 
-                avgSubsidy =
-                        subsidyReport.getAmountDistributed() /
-                                subsidyReport.getApprovedSubsidies();
-            }
-        }
+			return new ReportAnalyticsDTO(totalPrograms, activePrograms, budgetUsed, programUtilization,
 
-        double avgRevenue = 0;
-        if (taxReport != null &&
-            taxReport.getTotalTaxpayers() != null &&
-            taxReport.getTotalTaxpayers() > 0 &&
-            taxReport.getRevenueCollected() != null) {
+					applicationsReceived, approvedSubsidies, approvalRate, avgSubsidy,
 
-            avgRevenue =
-                    taxReport.getRevenueCollected() /
-                            taxReport.getTotalTaxpayers();
-        }
+					totalTaxpayers, revenueCollected, avgRevenue);
 
-        return new ReportAnalyticsDTO(
+		} catch (Exception e) {
+			throw new RuntimeException("Error calculating analytics", e);
+		}
+	}
 
-                programReport != null ? programReport.getTotalPrograms() : 0,
-                programReport != null ? programReport.getActivePrograms() : 0,
-                programReport != null ? programReport.getBudgetUsed() : 0,
-                programUtilization,
-
-                subsidyReport != null ? subsidyReport.getApplicationsReceived() : 0,
-                subsidyReport != null ? subsidyReport.getApprovedSubsidies() : 0,
-                approvalRate,
-                avgSubsidy,
-
-                taxReport != null ? taxReport.getTotalTaxpayers() : 0,
-                taxReport != null ? taxReport.getRevenueCollected() : 0,
-                avgRevenue
-        );
-    }
+	// ✅ Helper method
+	private Report getLatestReport(ReportScope scope) {
+		List<Report> reports = reportRepository.findByScope(scope);
+		return reports.isEmpty() ? null : reports.get(reports.size() - 1);
+	}
 }

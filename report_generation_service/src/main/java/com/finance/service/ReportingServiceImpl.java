@@ -13,9 +13,11 @@ import com.finance.client.TaxClient;
 import com.finance.dto.AnalyticsDTO;
 import com.finance.dto.ReportResponseDTO;
 import com.finance.enums.ReportScope;
+import com.finance.exceptions.ReportNotFoundException;
 import com.finance.model.Report;
 import com.finance.repository.ReportRepository;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tools.jackson.databind.ObjectMapper;
@@ -23,6 +25,7 @@ import tools.jackson.databind.ObjectMapper;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class ReportingServiceImpl implements ReportingService {
 
 	private final ReportRepository reportRepository;
@@ -115,7 +118,7 @@ public class ReportingServiceImpl implements ReportingService {
 		log.info("Fetching detailed report for ID: {}", id);
 
 		Report report = reportRepository.findById(id)
-				.orElseThrow(() -> new RuntimeException("Report not found with id: " + id));
+				.orElseThrow(() -> new ReportNotFoundException("Report not found with id: " + id));
 
 		return modelMapper.map(report, ReportResponseDTO.class);
 	}
@@ -133,5 +136,16 @@ public class ReportingServiceImpl implements ReportingService {
 		}
 
 		return summary;
+	}
+
+	@Override
+	public List<ReportResponseDTO> getAll() {
+		List<Report> reports = reportRepository.findAll();
+
+		if (reports.isEmpty()) {
+			throw new ReportNotFoundException("No reports currently exist in the database.");
+		}
+
+		return reports.stream().map(report -> modelMapper.map(report, ReportResponseDTO.class)).toList();
 	}
 }

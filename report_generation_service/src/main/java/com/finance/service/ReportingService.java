@@ -17,4 +17,6 @@ public interface ReportingService {
 	Map<ReportScope, ReportResponseDTO> getSummaryReports();
 
 	AnalyticsDTO getAnalytics();
+
+	List<ReportResponseDTO> getAll();
 }

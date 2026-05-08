@@ -32,14 +32,11 @@ public class Report {
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
-	private ReportScope scope; // PROGRAM / SUBSIDY / TAX
+	private ReportScope scope;
 
-	// ✅ Store all analytics data in one column
 	@Lob
 	@Column(columnDefinition = "TEXT")
 	private String metrics;
-	// Example:
-	// {"totalPrograms":50, "activePrograms":30, "budgetUsed":200000}
 
 	@Column(nullable = false)
 	private LocalDateTime generatedDate;

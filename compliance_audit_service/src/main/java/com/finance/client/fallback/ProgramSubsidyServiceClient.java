@@ -20,7 +20,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class ProgramSubsidyServiceClient {
-
+	private static final String EXTERNAL_SERVICE_UNAVAILABLE = "external.service.unavailable";
+	private static final String NOT_FOUND_MESSAGE = "not.found.message";
+	private static final String PROGRAM = "Program";
 	private final ProgramSubsidyFeignClient programSubsidyFeignClient;
 	private final MessageUtil messageUtil;
 
@@ -29,7 +31,7 @@ public class ProgramSubsidyServiceClient {
 		try {
 			return programSubsidyFeignClient.getProgramById(id);
 		} catch (feign.FeignException.NotFound ex) {
-			throw new ProgramNotFoundException(messageUtil.getMessage("not.found.message", "Program", id));
+			throw new ProgramNotFoundException(messageUtil.getMessage(NOT_FOUND_MESSAGE, PROGRAM, id));
 		}
 	}
 
@@ -42,7 +44,7 @@ public class ProgramSubsidyServiceClient {
 			throw pnfe;
 		}
 
-		throw new ServiceUnavailableException(messageUtil.getMessage("external.service.unavailable", "Program"));
+		throw new ServiceUnavailableException(messageUtil.getMessage(EXTERNAL_SERVICE_UNAVAILABLE, PROGRAM));
 	}
 
 	@CircuitBreaker(name = "programSubsidyService", fallbackMethod = "getSubsidyFallback")
@@ -50,7 +52,7 @@ public class ProgramSubsidyServiceClient {
 		try {
 			return programSubsidyFeignClient.getSubsidyById(id);
 		} catch (feign.FeignException.NotFound ex) {
-			throw new SubsidyNotFoundException(messageUtil.getMessage("not.found.message", "Subsidy", id));
+			throw new SubsidyNotFoundException(messageUtil.getMessage(NOT_FOUND_MESSAGE, "Subsidy", id));
 		}
 	}
 
@@ -63,7 +65,7 @@ public class ProgramSubsidyServiceClient {
 			throw snfe;
 		}
 
-		throw new ServiceUnavailableException(messageUtil.getMessage("external.service.unavailable", "Subsidy"));
+		throw new ServiceUnavailableException(messageUtil.getMessage(EXTERNAL_SERVICE_UNAVAILABLE, "Subsidy"));
 	}
 
 	@CircuitBreaker(name = "programSubsidyService", fallbackMethod = "updateProgramStatusFallback")
@@ -71,7 +73,7 @@ public class ProgramSubsidyServiceClient {
 		try {
 			return programSubsidyFeignClient.updateSubsidy(requestBody, subsidyId);
 		} catch (feign.FeignException.NotFound ex) {
-			throw new ProgramNotFoundException(messageUtil.getMessage("not.found.message", "Program", subsidyId));
+			throw new ProgramNotFoundException(messageUtil.getMessage(NOT_FOUND_MESSAGE, PROGRAM, subsidyId));
 		}
 	}
 
@@ -84,6 +86,6 @@ public class ProgramSubsidyServiceClient {
 			throw pnfe;
 		}
 
-		throw new ServiceUnavailableException(messageUtil.getMessage("external.service.unavailable", "Program"));
+		throw new ServiceUnavailableException(messageUtil.getMessage(EXTERNAL_SERVICE_UNAVAILABLE, PROGRAM));
 	}
 }

@@ -7,17 +7,24 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.finance.client.CitizenClient;
+import com.finance.client.ComplianceFeignClient;
 import com.finance.client.NotificationFeignClient;
 import com.finance.client.UserFeignClient;
+import com.finance.dto.ComplianceCreateRequest;
 import com.finance.dto.NotificationRequestDto;
 import com.finance.dto.SubsidyRequest;
 import com.finance.dto.SubsidyResponse;
+import com.finance.dto.SubsidyUpdateRequest;
 import com.finance.dto.UserDto;
+import com.finance.enums.ComplianceRecordType;
 import com.finance.enums.NotificationCategory;
 import com.finance.enums.SubsidyStatus;
+import com.finance.exceptions.EntityNotFoundException;
+import com.finance.exceptions.InvalidStatusTransitionException;
+import com.finance.exceptions.NoSubsidiesFoundException;
+import com.finance.exceptions.ProgramNotFoundException;
 import com.finance.exceptions.SubsidyNotFoundException;
 import com.finance.model.FinancialProgram;
 import com.finance.model.Subsidy;
@@ -38,17 +45,18 @@ public class SubsidyServiceImpl implements SubsidyService {
 	private final CitizenClient citizenClient;
 	public final NotificationFeignClient notificationFeignClient;
 	public final UserFeignClient userFeignClient;
+	private final ComplianceFeignClient complianceFeignClient;
 
 	@Override
-	@Transactional
+
 	public SubsidyResponse saveSubsidy(SubsidyRequest request) {
-		// Validate citizen externally
+		// ✅ Validate citizen externally
 		Boolean isValid = citizenClient.validateCitizen(request.getEntityId());
 		if (!isValid) {
 			throw new IllegalStateException("Citizen entity is not valid.");
 		}
 
-		// Validate program internally
+		// ✅ Validate program internally
 		FinancialProgram program = programRepository.findById(request.getProgramId())
 				.orElseThrow(() -> new IllegalArgumentException("Program not found"));
 
@@ -57,10 +65,10 @@ public class SubsidyServiceImpl implements SubsidyService {
 		}
 
 		Subsidy subsidy = new Subsidy();
-		subsidy.setEntityId(request.getEntityId()); // ✅ directly store entityId
+		subsidy.setEntityId(request.getEntityId());
 		subsidy.setAmount(request.getAmount());
 		subsidy.setDate(request.getDate() != null ? request.getDate() : LocalDate.now());
-		subsidy.setStatus(SubsidyStatus.valueOf(request.getStatus().toUpperCase()));
+		subsidy.setStatus(SubsidyStatus.VERIFIED);
 		subsidy.setProgram(program);
 
 		Subsidy saved = subsidyRepository.save(subsidy);
@@ -76,23 +84,43 @@ public class SubsidyServiceImpl implements SubsidyService {
 
 		notificationFeignClient.sendNotification(notification, emailAddr);
 
-		return toResponse(saved);
+//	    //  Create compliance record
+		ComplianceCreateRequest complianceRequest = new ComplianceCreateRequest();
+		complianceRequest.setEntityId(saved.getEntityId());
+		complianceRequest.setReferenceId(saved.getSubsidyId());
+		complianceRequest.setType(ComplianceRecordType.SUBSIDY);
+		complianceRequest.setNotes("Subsidy granted and corresponding compliance record logged successfully.");
 
+		complianceFeignClient.create(complianceRequest);
+
+		return toResponse(saved);
 	}
 
 	@Override
 	public List<SubsidyResponse> getAllSubsidies() {
-		return subsidyRepository.findAll().stream().map(this::toResponse).toList();
+		List<Subsidy> subsidies = subsidyRepository.findAll();
+		if (subsidies.isEmpty()) {
+			throw new NoSubsidiesFoundException();
+		}
+		return subsidies.stream().map(this::toResponse).toList();
 	}
 
 	@Override
 	public List<SubsidyResponse> getSubsidiesByProgram(Long programId) {
-		return subsidyRepository.findByProgramProgramId(programId).stream().map(this::toResponse).toList();
+		List<Subsidy> subsidies = subsidyRepository.findByProgramProgramId(programId);
+		if (subsidies.isEmpty()) {
+			throw new ProgramNotFoundException(programId);
+		}
+		return subsidies.stream().map(this::toResponse).toList();
 	}
 
 	@Override
 	public List<SubsidyResponse> getSubsidiesByEntity(Long entityId) {
-		return subsidyRepository.findByEntityId(entityId).stream().map(this::toResponse).toList();
+		List<Subsidy> subsidies = subsidyRepository.findByEntityId(entityId);
+		if (subsidies.isEmpty()) {
+			throw new EntityNotFoundException(entityId);
+		}
+		return subsidies.stream().map(this::toResponse).toList();
 	}
 
 	@Override
@@ -107,10 +135,10 @@ public class SubsidyServiceImpl implements SubsidyService {
 				subsidy.getDate(), subsidy.getStatus().name(), subsidy.getProgram().getProgramId());
 	}
 
-    @Override
-    public BigDecimal getApprovedAmountByProgram(Long programId) {
-        return subsidyRepository.sumApprovedAmountByProgramId(programId);
-    }
+	@Override
+	public BigDecimal getApprovedAmountByProgram(Long programId) {
+		return subsidyRepository.sumApprovedAmountByProgramId(programId);
+	}
 
 	public long getApprovedSubsidies(Long programId) {
 		return subsidyRepository.countByProgramProgramIdAndStatus(programId, SubsidyStatus.GRANTED);
@@ -123,6 +151,34 @@ public class SubsidyServiceImpl implements SubsidyService {
 		summary.put("approvedSubsidies", subsidyRepository.countByStatus(SubsidyStatus.GRANTED));
 		summary.put("amountDistributed", subsidyRepository.sumApprovedAmountAcrossAllPrograms());
 		return summary;
+	}
+
+	@Override
+	public SubsidyResponse updateSubsidy(SubsidyUpdateRequest requestBody, Long subsidyId) {
+
+		Subsidy subsidy = subsidyRepository.findById(subsidyId)
+				.orElseThrow(() -> new SubsidyNotFoundException(subsidyId));
+
+		SubsidyStatus currentStatus = subsidy.getStatus();
+		SubsidyStatus newStatus = requestBody.getStatus();
+
+		if (currentStatus != SubsidyStatus.VERIFIED) {
+			throw new InvalidStatusTransitionException(
+					"Cannot update status. Current status is " + currentStatus + ", but it must be VERIFIED.");
+		}
+		if (newStatus != SubsidyStatus.VERIFIED) {
+			subsidy.setStatus(newStatus);
+		} else {
+			throw new InvalidStatusTransitionException(
+					"Invalid transition to " + newStatus + ". From VERIFIED, allowed statuses are GRANTED or ONHOLD.");
+		}
+		Subsidy updatedSubsidy = subsidyRepository.save(subsidy);
+		return mapToResponse(updatedSubsidy);
+	}
+
+	private SubsidyResponse mapToResponse(Subsidy subsidy) {
+		return new SubsidyResponse(subsidy.getSubsidyId(), subsidy.getEntityId(), subsidy.getAmount(),
+				subsidy.getDate(), subsidy.getStatus().name(), subsidy.getProgram().getProgramId());
 	}
 
 }

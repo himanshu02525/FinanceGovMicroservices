@@ -29,111 +29,152 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class DisclosureServiceImpl implements DisclosureService {
 
-	private final DisclosureRepository disclosureRepository;
-	private final CitizenClient citizenClient;
-	private final NotificationFeignClient notificationFeignClient;
-	private final UserFeignClient userFeignClient;
+    private final DisclosureRepository disclosureRepository;
+    private final CitizenClient citizenClient;
+    private final NotificationFeignClient notificationFeignClient;
+    private final UserFeignClient userFeignClient;
 
-	@Override
-	@Transactional
-	public DisclosureResponseDTO processDisclosure(DisclosureCreateRequestDTO request) {
-		// 1. Verify Entity
-		boolean exists;
-		try {
-			exists = citizenClient.validateCitizen(request.getEntityId());
-		} catch (Exception e) {
-			throw new EntityNotFoundException("External validation service unreachable.");
-		}
+    @Override
+    @Transactional
+    public DisclosureResponseDTO processDisclosure(DisclosureCreateRequestDTO request) {
+        log.info("Starting disclosure processing for Entity ID: {} with type: {}", request.getEntityId(), request.getType());
 
-		if (!exists) {
-			throw new EntityNotFoundException("Entity ID " + request.getEntityId() + " not found.");
-		}
+        boolean exists;
+        try {
+            exists = citizenClient.validateCitizen(request.getEntityId());
+            log.debug("Citizen validation result for Entity ID {}: {}", request.getEntityId(), exists);
+        } catch (Exception e) {
+            log.error("Failed to connect to Citizen Service for Entity ID {}: {}", request.getEntityId(), e.getMessage());
+            throw new EntityNotFoundException("Entity ID " + request.getEntityId() + " not found.");
+        }
 
-		// 2. Save Disclosure
-		Disclosure disclosure = new Disclosure();
-		disclosure.setEntityId(request.getEntityId());
-		disclosure.setType(request.getType());
-		disclosure.setStatus(DisclosureStatus.SUBMITTED);
-		disclosure.setSubmissionDate(LocalDateTime.now());
+        if (!exists) {
+            log.warn("Disclosure processing aborted: Entity ID {} does not exist.", request.getEntityId());
+            throw new EntityNotFoundException("Entity ID " + request.getEntityId() + " not found.");
+        }
 
-		Disclosure saved = disclosureRepository.save(disclosure);
+        Disclosure disclosure = new Disclosure();
+        disclosure.setEntityId(request.getEntityId());
+        disclosure.setType(request.getType());
+        disclosure.setStatus(DisclosureStatus.SUBMITTED);
+        disclosure.setSubmissionDate(LocalDateTime.now());
 
-		// 3. INLINE NOTIFICATION: Submission
-		try {
-			UserDto user = userFeignClient.getUserById(saved.getEntityId());
-			if (user != null && user.getEmail() != null) {
-				NotificationRequestDto notification = NotificationRequestDto.builder().userId(user.getUserId())
-						.entityId(saved.getEntityId()).category(NotificationCategory.TAX)
-						.message("Your disclosure has been submitted successfully.").build();
-				notificationFeignClient.sendNotification(notification, user.getEmail());
-			}
-		} catch (Exception e) {
-			log.error("Notification failed for entity {}: {}", saved.getEntityId(), e.getMessage());
-		}
+        Disclosure saved = disclosureRepository.save(disclosure);
+        log.info("Disclosure record saved with ID: {} and status: {}", saved.getDisclosureId(), saved.getStatus());
 
-		return mapToResponseDTO(saved);
-	}
+        try {
+            log.debug("Fetching user details for notification for Entity ID: {}", saved.getEntityId());
+            UserDto user = userFeignClient.getUserById(saved.getEntityId());
+            
+            if (user != null && user.getEmail() != null) {
+                NotificationRequestDto notification = NotificationRequestDto.builder()
+                        .userId(user.getUserId())
+                        .entityId(saved.getEntityId())
+                        .category(NotificationCategory.TAX)
+                        .message("Your disclosure has been submitted successfully.")
+                        .build();
 
-	@Override
-	@Transactional
-	public List<DisclosureResponseDTO> getAllDisclosuresByEntityId(Long entityId) {
-		// Fetch records from the database
-		List<Disclosure> list = disclosureRepository.findByEntityId(entityId);
+                notificationFeignClient.sendNotification(notification, user.getEmail());
+                log.info("Submission notification sent to email: {}", user.getEmail());
+            } else {
+                log.warn("Notification skipped: User or email not found for Entity ID: {}", saved.getEntityId());
+            }
+        } catch (Exception e) {
+            log.error("Notification failed for entity {}: {}", saved.getEntityId(), e.getMessage());
+        }
 
-		// Check if the list is empty and throw the custom exception
-		if (list.isEmpty()) {
-			log.error("Fetch failed: No disclosure records found for Entity ID: {}", entityId);
-			throw new EntityNotFoundException("No disclosure records found for Entity ID: " + entityId);
-		}
+        return mapToResponseDTO(saved);
+    }
 
-		// Map and return the list of DTOs
-		return list.stream().map(this::mapToResponseDTO).collect(Collectors.toList());
-	}
+    @Override
+    @Transactional
+    public List<DisclosureResponseDTO> getAllDisclosuresByEntityId(Long entityId) {
+        log.info("Fetching all disclosures for Entity ID: {}", entityId);
 
-	@Override
-	@Transactional
-	public DisclosureResponseDTO validateSingleDisclosure(Long disclosureId, DisclosureStatus newStatus) {
-		Disclosure disclosure = disclosureRepository.findById(disclosureId)
-				.orElseThrow(() -> new ResourceNotFoundException("Disclosure record not found."));
+        List<Disclosure> list = disclosureRepository.findByEntityId(entityId);
 
-		disclosure.setStatus(newStatus);
-		Disclosure saved = disclosureRepository.save(disclosure);
+        if (list.isEmpty()) {
+            log.warn("No disclosure records found in database for Entity ID: {}", entityId);
+            throw new EntityNotFoundException(
+                    "No disclosure records found for Entity ID: " + entityId);
+        }
 
-		// ✅ INLINE NOTIFICATION: Single Update
-		try {
-			UserDto user = userFeignClient.getUserById(saved.getEntityId());
-			if (user != null && user.getEmail() != null) {
-				String msg = (newStatus == DisclosureStatus.VALIDATED)
-						? "Disclosure Validated: Your record has been approved."
-						: "Disclosure Rejected: Please check the details and submit again.";
+        log.debug("Found {} disclosure records for Entity ID: {}", list.size(), entityId);
+        return list.stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
+    }
 
-				NotificationRequestDto notification = NotificationRequestDto.builder().userId(user.getUserId())
-						.entityId(saved.getEntityId()).category(NotificationCategory.TAX).message(msg).build();
-				notificationFeignClient.sendNotification(notification, user.getEmail());
-			}
-		} catch (Exception e) {
-			log.error("Single notification failed for disclosure {}: {}", disclosureId, e.getMessage());
-		}
+    @Override
+    @Transactional
+    public DisclosureResponseDTO validateSingleDisclosure(Long disclosureId, DisclosureStatus newStatus) {
+        log.info("Attempting to update Disclosure ID: {} to status: {}", disclosureId, newStatus);
 
-		return mapToResponseDTO(saved);
-	}
+        Disclosure disclosure = disclosureRepository.findById(disclosureId)
+                .orElseThrow(() -> {
+                    log.error("Validation failed: Disclosure ID {} not found", disclosureId);
+                    return new ResourceNotFoundException("Disclosure record not found.");
+                });
 
-	
-	
-	@Override
-	public List<DisclosureResponseDTO> getAllDisclosures() {
-		return disclosureRepository.findAll().stream().map(this::mapToResponseDTO).collect(Collectors.toList());
-	}
+        disclosure.setStatus(newStatus);
+        Disclosure saved = disclosureRepository.save(disclosure);
+        log.info("Disclosure ID: {} updated successfully to {}", disclosureId, newStatus);
 
-	@Override
-	public DisclosureResponseDTO getDisclosureByDisclosureId(Long id) {
-		Disclosure d = disclosureRepository.findById(id)
-				.orElseThrow(() -> new ResourceNotFoundException("Disclosure " + id + " not found"));
-		return mapToResponseDTO(d);
-	}
+        try {
+            log.debug("Fetching user details for status update notification for Entity ID: {}", saved.getEntityId());
+            UserDto user = userFeignClient.getUserById(saved.getEntityId());
+            
+            if (user != null && user.getEmail() != null) {
+                String msg = (newStatus == DisclosureStatus.VALIDATED)
+                        ? "Disclosure Validated: Your record has been approved."
+                        : "Disclosure Rejected: Please check the details and submit again.";
 
-	private DisclosureResponseDTO mapToResponseDTO(Disclosure d) {
-		return DisclosureResponseDTO.builder().disclosureId(d.getDisclosureId()).entityId(d.getEntityId())
-				.type(d.getType()).status(d.getStatus()).submissionDate(d.getSubmissionDate()).build();
-	}
+                NotificationRequestDto notification = NotificationRequestDto.builder()
+                        .userId(user.getUserId())
+                        .entityId(saved.getEntityId())
+                        .category(NotificationCategory.TAX)
+                        .message(msg)
+                        .build();
+
+                notificationFeignClient.sendNotification(notification, user.getEmail());
+                log.info("Status update notification sent to {} for Disclosure ID: {}", user.getEmail(), disclosureId);
+            }
+        } catch (Exception e) {
+            log.error("Single notification failed for disclosure {}: {}", disclosureId, e.getMessage());
+        }
+
+        return mapToResponseDTO(saved);
+    }
+
+    @Override
+    public List<DisclosureResponseDTO> getAllDisclosures() {
+        log.debug("Fetching all disclosures across the system.");
+        return disclosureRepository.findAll()
+                .stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public DisclosureResponseDTO getDisclosureByDisclosureId(Long id) {
+        log.debug("Fetching details for Disclosure ID: {}", id);
+
+        Disclosure d = disclosureRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.warn("Disclosure ID {} not found in database.", id);
+                    return new ResourceNotFoundException("Disclosure " + id + " not found");
+                });
+
+        return mapToResponseDTO(d);
+    }
+
+    private DisclosureResponseDTO mapToResponseDTO(Disclosure d) {
+        return DisclosureResponseDTO.builder()
+                .disclosureId(d.getDisclosureId())
+                .entityId(d.getEntityId())
+                .type(d.getType())
+                .status(d.getStatus())
+                .submissionDate(d.getSubmissionDate())
+                .build();
+    }
 }

@@ -27,8 +27,7 @@ public class GlobalExceptionHandler {
 	//
 
 	// =====================================================
-	// Invalid Path Variable (Enum mismatch - ReportScope)
-	// Example: /reports/generate/INVALID
+	// Invalid Path Variable 
 	// =====================================================
 	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
 	public ResponseEntity<String> handleMethodArgumentMismatch(MethodArgumentTypeMismatchException ex) {

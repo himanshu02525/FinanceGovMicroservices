@@ -15,9 +15,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class DisclosureResponseDTO {
-    private Long disclosureId; // Unique ID for the disclosure
-    private Long entityId; // The ID of the citizen/business who filed it
-    private DisclosureType type; // The type (INCOME/EXPENSE)
-    private DisclosureStatus status; // The status (SUBMITTED, VALIDATED, REJECTED)
+	// Unique ID for the disclosure
+    private Long disclosureId;
+    // The ID of the citizen/business who filed it
+    private Long entityId; 
+    // The type (INCOME/EXPENSE)
+    private DisclosureType type; 
+    // The status (SUBMITTED, VALIDATED, REJECTED)
+    private DisclosureStatus status; 
     private LocalDateTime submissionDate;
 }

@@ -16,5 +16,4 @@ public interface BudgetAllocationService {
 
     String deleteAllocation(Long allocationId);
 
-    // Future: We deduct budget after subsidy approval
 }

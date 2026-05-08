@@ -26,13 +26,13 @@ public interface SubsidyRepository extends JpaRepository<Subsidy, Long> {
 			""")
 	BigDecimal sumApprovedAmountByProgramId(@Param("programId") Long programId);
 
-//    
+    
 	long countByProgramProgramIdAndStatus(Long programId, SubsidyStatus status);
 
-	// ✅ Count all subsidies with a given status
+	
 	long countByStatus(SubsidyStatus status);
 
-	@Query("SELECT COALESCE(SUM(s.amount), 0) FROM Subsidy s WHERE s.status = 'APPROVED'")
+	@Query("SELECT COALESCE(SUM(s.amount), 0) FROM Subsidy s WHERE s.status = 'GRANTED'")
 	BigDecimal sumApprovedAmountAcrossAllPrograms();
 
 }

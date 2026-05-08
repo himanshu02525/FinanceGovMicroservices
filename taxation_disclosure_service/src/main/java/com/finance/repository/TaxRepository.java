@@ -22,7 +22,7 @@ public interface TaxRepository extends JpaRepository<TaxRecord, Long> {
     // Checks if a record already exists for an entity and year to prevent duplicate filing
     boolean existsByEntityIdAndYear(Long entityId, Integer year);
 
-    // --- AGGREGATION QUERIES FOR STATISTICS ---
+    // AGGREGATION QUERIES FOR STATISTICS 
 
     @Query("SELECT COUNT(DISTINCT t.entityId) FROM TaxRecord t")
     Integer countTotalTaxPayers();

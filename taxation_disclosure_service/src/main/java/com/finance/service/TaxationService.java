@@ -5,7 +5,7 @@ import java.util.Map;
 
 import com.finance.dto.TaxRequestDTO;
 import com.finance.dto.TaxResponseDTO;
-import com.finance.enums.TaxStatus;
+import com.finance.dto.TaxUpdateDTO;
 
 public interface TaxationService {
     // Create record and notify of pending status
@@ -19,8 +19,9 @@ public interface TaxationService {
     
     List<TaxResponseDTO> getAllTaxRecordsByEntityId(Long entityId);
     
+
     // Officer: Validate payment and notify user of success
-    TaxResponseDTO verifySingleTaxRecord(Long taxId, TaxStatus newStatus); 
+    TaxResponseDTO verifyTaxRecordByTaxId(Long taxId, TaxUpdateDTO taxUpdateDTO); 
     
     // Dashboard: Aggregate fiscal statistics
     Map<String, Object> getTaxStatistics();

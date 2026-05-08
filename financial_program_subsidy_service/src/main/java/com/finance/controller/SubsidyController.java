@@ -6,14 +6,17 @@ import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.finance.dto.SubsidyRequest;
 import com.finance.dto.SubsidyResponse;
+import com.finance.dto.SubsidyUpdateRequest;
 import com.finance.service.SubsidyService;
 
 import lombok.RequiredArgsConstructor;
@@ -63,6 +66,12 @@ public class SubsidyController {
 	public ResponseEntity<SubsidyResponse> getSubsidyById(@PathVariable Long id) {
 		SubsidyResponse response = service.getSubsidyById(id);
 		return ResponseEntity.ok(response);
+	}
+
+	@PutMapping("/update/{subsidyId}")
+	public ResponseEntity<SubsidyResponse> updateSubsidy(@RequestBody SubsidyUpdateRequest requestBody,
+			@PathVariable Long subsidyId) {
+		return ResponseEntity.ok(service.updateSubsidy(requestBody, subsidyId));
 	}
 
 	// -------- SUBSIDY METRICS --------

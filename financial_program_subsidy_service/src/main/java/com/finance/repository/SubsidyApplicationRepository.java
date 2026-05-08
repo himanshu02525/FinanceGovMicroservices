@@ -10,7 +10,7 @@ import com.finance.model.SubsidyApplication;
 
 @Repository
 public interface SubsidyApplicationRepository extends JpaRepository<SubsidyApplication, Long> {
-	List<SubsidyApplication> findByProgramProgramId(Long programId);
+	List<SubsidyApplication> findByProgramId(Long programId);
 
 	List<SubsidyApplication> findByStatus(String status);
 

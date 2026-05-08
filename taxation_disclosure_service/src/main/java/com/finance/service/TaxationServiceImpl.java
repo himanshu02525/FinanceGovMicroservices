@@ -227,35 +227,37 @@ public class TaxationServiceImpl implements TaxationService {
 	}
 
 	@Override
-public Map<String, Object> getTaxStatistics() {
- 
-    log.info("Calculating tax statistics...");
- 
-    Map<String, Object> statistics = new HashMap<>();
- 
-    int totalTaxpayers = Optional
-            .ofNullable(taxRepository.countTotalTaxPayers())
-            .orElse(0);
- 
-    double revenue = Optional
-            .ofNullable(taxRepository.calculateTotalRevenue())
-            .orElse(0.0);
- 
-    double avgTaxPerUser = totalTaxpayers > 0
-            ? revenue / totalTaxpayers
-            : 0;
- 
-    statistics.put("totalTaxpayers", totalTaxpayers);
-    statistics.put("revenueCollected", revenue);
-    statistics.put("avgTaxPerUser", avgTaxPerUser); 
- 
-    log.debug("Statistics generated - Total Taxpayers: {}, Revenue: {}",
-            totalTaxpayers, revenue);
- 
-    return statistics;
-}
+	public Map<String, Object> getTaxStatistics() {
 
+		log.info("Calculating tax statistics...");
 
+		Map<String, Object> statistics = new HashMap<>();
+
+		int totalTaxpayers = Optional.ofNullable(taxRepository.countTotalTaxPayers()).orElse(0);
+
+		long totalRecords = taxRepository.count();
+
+		long pendingCount = taxRepository.countByStatus(TaxStatus.PENDING);
+		long paidCount = taxRepository.countByStatus(TaxStatus.PAID);
+		long overdueCount = taxRepository.countByStatus(TaxStatus.OVERDUE);
+		long rejectedCount = taxRepository.countByStatus(TaxStatus.REJECTED);
+		long verifiedInitialCount = taxRepository.countByStatus(TaxStatus.VERIFIED_INITIAL);
+		long verifiedFinalCount = taxRepository.countByStatus(TaxStatus.VERIFIED_FINAL);
+
+		double revenue = Optional.ofNullable(taxRepository.calculateTotalRevenue()).orElse(0.0);
+
+		statistics.put("totalTaxpayers", totalTaxpayers);
+		statistics.put("totalRecords", totalRecords);
+		statistics.put("pendingCount", pendingCount);
+		statistics.put("paidCount", paidCount);
+		statistics.put("overdueCount", overdueCount);
+		statistics.put("rejectedCount", rejectedCount);
+		statistics.put("verifiedInitialCount", verifiedInitialCount);
+		statistics.put("verifiedFinalCount", verifiedFinalCount);
+		statistics.put("revenueCollected", revenue);
+
+		return statistics;
+	}
 
 	private TaxResponseDTO mapToResponseDTO(TaxRecord record) {
 		TaxResponseDTO dto = new TaxResponseDTO();

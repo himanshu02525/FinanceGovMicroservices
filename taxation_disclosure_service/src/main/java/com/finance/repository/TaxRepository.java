@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import com.finance.enums.TaxStatus;
 import com.finance.model.TaxRecord;
 
 @Repository
@@ -30,4 +31,6 @@ public interface TaxRepository extends JpaRepository<TaxRecord, Long> {
     @Query("SELECT COALESCE(SUM(t.amount), 0.0) FROM TaxRecord t WHERE t.status = com.finance.enums.TaxStatus.PAID")
     Double calculateTotalRevenue();
     List<TaxRecord> findByEntityId(Long entityId);
+    
+    long countByStatus(TaxStatus status);
 }

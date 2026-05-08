@@ -303,6 +303,7 @@ public class SecurityConfig {
                       "/subsidies/fetchByProgram/{programId}"
               ).hasAuthority("ROLE_PROGRAM_MANAGER")
 
+              .pathMatchers("/programs/fetchAll").hasAnyAuthority("ROLE_PROGRAM_MANAGER","ROLE_CITIZEN")
               .pathMatchers(
                       "/api/resources/**",
                       "/api/budget/**",
@@ -312,12 +313,13 @@ public class SecurityConfig {
               /* =====================================================
                * 6. CITIZEN (Explicit First, then Broad)
                * ===================================================== */
+              .pathMatchers("/applications/fetchByEntity/**","/applications/fetchByProgram/**").hasAnyAuthority("ROLE_FINANCIAL_OFFICER","ROLE_CITIZEN")
               .pathMatchers(
                       "/applications/save",
                       "/entities/createCitizen",
-                      "/entities/updateCitizenById",
-                      "/applications/fetchByEntity"
+                      "/entities/updateCitizenById"
               ).hasAuthority("ROLE_CITIZEN")
+              
 
               .pathMatchers(
                       "/documents/**",

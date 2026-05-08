@@ -12,5 +12,6 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
 
 	List<Report> findByScope(ReportScope scope);
 
-	Optional<Report> findTopByScopeOrderByCreatedAtDesc(ReportScope scope);
+	Optional<Report> findTopByScopeOrderByGeneratedDateDesc(ReportScope scope);
+
 }

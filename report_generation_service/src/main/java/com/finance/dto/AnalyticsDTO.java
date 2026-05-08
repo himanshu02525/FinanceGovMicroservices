@@ -2,8 +2,6 @@ package com.finance.dto;
 
 import java.util.Map;
 
-import com.finance.enums.ReportScope;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,7 +9,9 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ReportAnalyticsDTO {
-	private int totalReports;
-	private Map<ReportScope, Long> reportsByScope;
+public class AnalyticsDTO {
+
+	private Map<String, Object> taxDetails;
+	private Map<String, Object> programDetails;
+	private Map<String, Object> subsidyDetails;
 }

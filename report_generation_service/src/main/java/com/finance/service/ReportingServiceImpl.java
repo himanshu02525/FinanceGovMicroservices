@@ -4,13 +4,14 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import com.finance.client.SubsidyClient;
 import com.finance.client.TaxClient;
-import com.finance.dto.ReportAnalyticsDTO;
+import com.finance.dto.AnalyticsDTO;
+import com.finance.dto.ReportResponseDTO;
 import com.finance.enums.ReportScope;
 import com.finance.model.Report;
 import com.finance.repository.ReportRepository;
@@ -28,22 +29,20 @@ public class ReportingServiceImpl implements ReportingService {
 	private final TaxClient taxClient;
 	private final SubsidyClient subsidyClient;
 	private final ObjectMapper objectMapper;
+	private final ModelMapper modelMapper;
 
 	@Override
-	public Report generateReport(ReportScope scope) {
+	public ReportResponseDTO generateReport(ReportScope scope) {
 		try {
 			Map<String, Object> reportData = new HashMap<>();
 
-			// Aggregating data based on scope
-			if (scope == ReportScope.TAX || scope == ReportScope.TAX) {
-				reportData.put("taxMetrics", taxClient.getTaxStatistics());
-			}
+			switch (scope) {
 
-			if (scope == ReportScope.SUBSIDY || scope == ReportScope.PROGRAM) {
-				reportData.put("programMetrics", subsidyClient.getProgramSummary());
-			}
-			if (scope == ReportScope.SUBSIDY || scope == ReportScope.SUBSIDY) {
-				reportData.put("subsidyMetrics", subsidyClient.getSubsidySummary());
+			case TAX -> reportData.put("taxMetrics", taxClient.getTaxStatistics());
+
+			case PROGRAM -> reportData.put("programMetrics", subsidyClient.getProgramSummary());
+
+			case SUBSIDY -> reportData.put("subsidyMetrics", subsidyClient.getSubsidySummary());
 			}
 
 			reportData.put("generatedAt", LocalDateTime.now());
@@ -55,7 +54,8 @@ public class ReportingServiceImpl implements ReportingService {
 			report.setGeneratedDate(LocalDateTime.now());
 			report.setMetrics(jsonData);
 
-			return reportRepository.save(report);
+			return modelMapper.map(reportRepository.save(report), ReportResponseDTO.class);
+
 		} catch (Exception e) {
 			log.error("Failed to generate report for scope: {}", scope, e);
 			throw new RuntimeException("Reporting Service Error: " + e.getMessage());
@@ -63,44 +63,73 @@ public class ReportingServiceImpl implements ReportingService {
 	}
 
 	@Override
-	public ReportAnalyticsDTO getAnalytics() {
-		List<Report> allReports = reportRepository.findAll();
+	public AnalyticsDTO getAnalytics() {
 
-		Map<ReportScope, Long> counts = allReports.stream()
-				.collect(Collectors.groupingBy(Report::getScope, Collectors.counting()));
+		AnalyticsDTO dto = new AnalyticsDTO();
 
-		ReportAnalyticsDTO dto = new ReportAnalyticsDTO();
-		dto.setTotalReports(allReports.size());
-		dto.setReportsByScope(counts);
+		try {
+			Map<String, Object> taxStatistics = taxClient.getTaxStatistics();
+			if (taxStatistics != null && !taxStatistics.isEmpty()) {
+				dto.setTaxDetails(taxStatistics);
+			}
+		} catch (Exception e) {
+			log.error("Tax service failed", e);
+			dto.setTaxDetails(null);
+		}
+
+		try {
+			Map<String, Object> programSummary = subsidyClient.getProgramSummary();
+			if (programSummary != null && !programSummary.isEmpty()) {
+				dto.setProgramDetails(programSummary);
+			}
+		} catch (Exception e) {
+			log.error("Program service failed", e);
+			dto.setProgramDetails(null);
+		}
+
+		try {
+			Map<String, Object> subsidySummary = subsidyClient.getSubsidySummary();
+			if (subsidySummary != null && !subsidySummary.isEmpty()) {
+				dto.setSubsidyDetails(subsidySummary);
+			}
+		} catch (Exception e) {
+			dto.setSubsidyDetails(null);
+		}
 
 		return dto;
 	}
 
 	@Override
-	public List<Report> getReportsByScope(ReportScope scope) {
+	public List<ReportResponseDTO> getReportsByScope(ReportScope scope) {
+
 		log.info("Fetching all historical reports for scope: {}", scope);
-		// Directly calls the repository to find reports by the Enum type
-		return reportRepository.findByScope(scope);
+
+		List<Report> reports = reportRepository.findByScope(scope);
+
+		return reports.stream().map(report -> modelMapper.map(report, ReportResponseDTO.class)).toList();
 	}
 
 	@Override
-	public Report getReportById(Long id) {
+	public ReportResponseDTO getReportById(Long id) {
+
 		log.info("Fetching detailed report for ID: {}", id);
-		// Uses findById and throws an exception if the report doesn't exist
-		return reportRepository.findById(id).orElseThrow(() -> new RuntimeException("Report not found with id: " + id));
+
+		Report report = reportRepository.findById(id)
+				.orElseThrow(() -> new RuntimeException("Report not found with id: " + id));
+
+		return modelMapper.map(report, ReportResponseDTO.class);
 	}
 
 	@Override
-	public Map<ReportScope, Report> getSummaryReports() {
+	public Map<ReportScope, ReportResponseDTO> getSummaryReports() {
+
 		log.info("Generating summary of latest reports per scope");
 
-		Map<ReportScope, Report> summary = new HashMap<>();
+		Map<ReportScope, ReportResponseDTO> summary = new HashMap<>();
 
-		// Iterate through all possible scopes (TAX, SUBSIDY, OVERALL)
 		for (ReportScope scope : ReportScope.values()) {
-			// Find reports for this scope, sorted by creation date descending, and take the
-			// first
-			reportRepository.findTopByScopeOrderByCreatedAtDesc(scope).ifPresent(report -> summary.put(scope, report));
+			reportRepository.findTopByScopeOrderByGeneratedDateDesc(scope)
+					.ifPresent(report -> summary.put(scope, modelMapper.map(report, ReportResponseDTO.class)));
 		}
 
 		return summary;

@@ -11,9 +11,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.finance.dto.ReportAnalyticsDTO;
+import com.finance.dto.AnalyticsDTO;
+import com.finance.dto.ReportResponseDTO;
 import com.finance.enums.ReportScope;
-import com.finance.model.Report;
 import com.finance.service.ReportingService;
 
 import lombok.RequiredArgsConstructor;
@@ -26,27 +26,27 @@ public class ReportingController {
 	private final ReportingService reportingService;
 
 	@PostMapping("/generate")
-	public ResponseEntity<Report> generateReport(@RequestParam ReportScope scope) {
+	public ResponseEntity<ReportResponseDTO> generateReport(@RequestParam ReportScope scope) {
 		return ResponseEntity.ok(reportingService.generateReport(scope));
 	}
 
 	@GetMapping("/scope/{scope}")
-	public ResponseEntity<List<Report>> getReportsByScope(@PathVariable ReportScope scope) {
+	public ResponseEntity<List<ReportResponseDTO>> getReportsByScope(@PathVariable ReportScope scope) {
 		return ResponseEntity.ok(reportingService.getReportsByScope(scope));
 	}
 
 	@GetMapping("/{id}")
-	public ResponseEntity<Report> getReportById(@PathVariable Long id) {
+	public ResponseEntity<ReportResponseDTO> getReportById(@PathVariable Long id) {
 		return ResponseEntity.ok(reportingService.getReportById(id));
 	}
 
 	@GetMapping("/summary")
-	public ResponseEntity<Map<ReportScope, Report>> getSummaryReports() {
+	public ResponseEntity<Map<ReportScope, ReportResponseDTO>> getSummaryReports() {
 		return ResponseEntity.ok(reportingService.getSummaryReports());
 	}
 
 	@GetMapping("/analytics")
-	public ResponseEntity<ReportAnalyticsDTO> getAnalytics() {
+	public ResponseEntity<AnalyticsDTO> getAnalytics() {
 		return ResponseEntity.ok(reportingService.getAnalytics());
 	}
 }

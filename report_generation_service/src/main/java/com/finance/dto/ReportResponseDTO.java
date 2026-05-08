@@ -15,9 +15,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 
 public class ReportResponseDTO {
-
-    private Long reportId;
-    private ReportScope scope;
-    private Map<String, Object> metrics;
-    private LocalDateTime generatedDate;
+	private Long reportId;
+	private ReportScope scope;
+	private LocalDateTime generatedDate;
+	private Map<String, Object> metrics;
 }

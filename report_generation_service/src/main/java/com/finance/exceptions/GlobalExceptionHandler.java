@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -27,31 +26,17 @@ public class GlobalExceptionHandler {
 	//
 
 	// =====================================================
-	// Invalid Path Variable 
+	// Invalid Path Variable
 	// =====================================================
 	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
 	public ResponseEntity<String> handleMethodArgumentMismatch(MethodArgumentTypeMismatchException ex) {
 
 		logger.error("Invalid path variable value: {}", ex.getValue());
 
-		return new ResponseEntity<>("Invalid report scope. Allowed values: PROGRAM, SUBSIDY, TAX, COMPLIANCE",
+		return new ResponseEntity<>("Invalid report scope. Allowed values: PROGRAM, SUBSIDY, TAX",
 				HttpStatus.BAD_REQUEST);
 	}
 
-	// =====================================================
-	// Invalid JSON Input
-	// =====================================================
-	@ExceptionHandler(HttpMessageNotReadableException.class)
-	public ResponseEntity<String> handleInvalidJson(HttpMessageNotReadableException ex) {
-
-		logger.error("Invalid JSON request body", ex);
-
-		return new ResponseEntity<>("Invalid request body or malformed JSON", HttpStatus.BAD_REQUEST);
-	}
-
-	// =====================================================
-	// Generic / Unexpected Exception
-	// =====================================================
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<String> handleGenericException(Exception ex) {
 

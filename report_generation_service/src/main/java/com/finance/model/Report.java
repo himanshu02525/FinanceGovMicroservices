@@ -4,8 +4,17 @@ import java.time.LocalDateTime;
 
 import com.finance.enums.ReportScope;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -14,28 +23,21 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Report {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long reportId;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long reportId;
 
-    @Enumerated(EnumType.STRING)
-    private ReportScope scope;
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false)
+	private ReportScope scope;
 
-    // -------- PROGRAM --------
-    private Integer totalPrograms;
-    private Integer activePrograms;
-    private Double budgetUsed;
+	@Lob
+	@Column(columnDefinition = "TEXT")
+	private String metrics;
 
-    // -------- SUBSIDY --------
-    private Integer applicationsReceived;
-    private Integer approvedSubsidies;
-    private Double amountDistributed;
-
-    // -------- TAX --------
-    private Integer totalTaxpayers;
-    private Double revenueCollected;
-
-    private LocalDateTime generatedDate;
+	@Column(nullable = false)
+	private LocalDateTime generatedDate;
 }

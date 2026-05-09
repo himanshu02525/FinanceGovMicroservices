@@ -8,13 +8,11 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.finance.dto.AnalyticsDTO;
-import com.finance.dto.ReportRequest;
 import com.finance.dto.ReportResponseDTO;
 import com.finance.enums.ReportScope;
 import com.finance.service.ReportingService;
@@ -40,8 +38,9 @@ public class ReportingController {
 	}
 
 	@PostMapping("/generate-by-scope")
-	public ResponseEntity<ReportResponseDTO> generateReport(@RequestBody ReportRequest request) {
-		return ResponseEntity.ok(reportingService.generateReportByScope(request));
+	public ResponseEntity<ReportResponseDTO> generateReport(@RequestParam("scope") ReportScope scope,
+			@RequestParam Long id) {
+		return ResponseEntity.ok(reportingService.generateReportByScope(scope, id));
 	}
 
 	@GetMapping("/scope/{scope}")

@@ -17,6 +17,7 @@ public interface SubsidyApplicationRepository extends JpaRepository<SubsidyAppli
 	@Query("SELECT s FROM SubsidyApplication s WHERE s.program.id = :programId")
 	List<SubsidyApplication> findByProgramId(Long programId);
 
+	@Query("SELECT COUNT(s) FROM SubsidyApplication s WHERE s.program.programId = :program AND s.status = :status")
 	long countByProgramAndStatus(Long program, ApplicationStatus status);
 
 	List<SubsidyApplication> findByEntityId(Long entityId);

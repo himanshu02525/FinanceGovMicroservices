@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.finance.dto.AnalyticsDTO;
+import com.finance.dto.ReportRequest;
 import com.finance.dto.ReportResponseDTO;
 import com.finance.enums.ReportScope;
 
@@ -19,4 +20,6 @@ public interface ReportingService {
 	AnalyticsDTO getAnalytics();
 
 	List<ReportResponseDTO> getAll();
+
+	ReportResponseDTO generateReportByScope(ReportRequest request);
 }

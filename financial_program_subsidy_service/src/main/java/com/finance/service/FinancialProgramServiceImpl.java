@@ -14,9 +14,12 @@ import org.springframework.transaction.annotation.Transactional;
 import com.finance.dto.FinancialProgramRequest;
 import com.finance.dto.FinancialProgramResponse;
 import com.finance.enums.ProgramStatus;
+import com.finance.enums.SubsidyStatus;
 import com.finance.exceptions.ProgramNotFoundException;
 import com.finance.model.FinancialProgram;
 import com.finance.repository.FinancialProgramRepository;
+import com.finance.repository.SubsidyApplicationRepository;
+import com.finance.repository.SubsidyRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +30,8 @@ import lombok.extern.slf4j.Slf4j;
 public class FinancialProgramServiceImpl implements FinancialProgramService {
 
 	private final FinancialProgramRepository repository;
+	private final SubsidyApplicationRepository subsidyApplicationRepository;
+	private final SubsidyRepository subsidyRepository;
 
 	@Override
 	@Transactional
@@ -149,10 +154,12 @@ public class FinancialProgramServiceImpl implements FinancialProgramService {
 				program.getBudget(), program.getStatus().name());
 	}
 
+	@Override
 	public long getTotalPrograms() {
 		return repository.count();
 	}
 
+	@Override
 	public long getActivePrograms() {
 		return repository.countByStatus(ProgramStatus.ACTIVE);
 	}
@@ -175,6 +182,19 @@ public class FinancialProgramServiceImpl implements FinancialProgramService {
 		summary.put("totalBudget", totalBudget);
 
 		return summary;
+	}
+
+	@Override
+	public Map<String, Object> getProgramSummary(Long programId) {
+		FinancialProgramResponse programDetails = getProgramById(programId);
+		BigDecimal approvedAmount = subsidyRepository.sumApprovedAmountByProgramId(programId);
+		Map<String, Object> response = new HashMap<>();
+		for (SubsidyStatus status : SubsidyStatus.values()) {
+			response.put("subsidy_" + status, subsidyRepository.countByProgramProgramIdAndStatus(programId, status));
+		}
+		response.put("programDeatils", programDetails);
+		response.put("approvedAmount", approvedAmount);
+		return response;
 	}
 
 }

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import com.finance.client.SubsidyClient;
 import com.finance.client.TaxClient;
 import com.finance.dto.AnalyticsDTO;
+import com.finance.dto.ReportRequest;
 import com.finance.dto.ReportResponseDTO;
 import com.finance.enums.ReportScope;
 import com.finance.exceptions.ReportNotFoundException;
@@ -147,5 +148,33 @@ public class ReportingServiceImpl implements ReportingService {
 		}
 
 		return reports.stream().map(report -> modelMapper.map(report, ReportResponseDTO.class)).toList();
+	}
+
+	@Override
+	public ReportResponseDTO generateReportByScope(ReportRequest request) {
+		ReportScope reportScope = request.getScope();
+		Map<String, Object> metrics = switch (reportScope) {
+		case TAX -> taxClient.getTaxStatistics();
+
+		case PROGRAM -> {
+			if (request.getProgramId() == null) {
+				yield subsidyClient.getProgramSummary();
+			} else {
+				yield subsidyClient.getProgramSummary(request.getProgramId());
+			}
+		}
+
+		case SUBSIDY -> subsidyClient.getSubsidySummary();
+
+		default -> throw new IllegalArgumentException("Unexpected value: " + reportScope);
+		};
+
+		Report report = new Report();
+		report.setMetrics(metrics.toString());
+		report.setScope(reportScope);
+		report.setGeneratedDate(LocalDateTime.now());
+
+		Report savedReport = reportRepository.save(report);
+		return modelMapper.map(savedReport, ReportResponseDTO.class);
 	}
 }

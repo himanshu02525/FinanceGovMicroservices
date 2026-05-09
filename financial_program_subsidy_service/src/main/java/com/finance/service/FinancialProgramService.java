@@ -9,13 +9,23 @@ import com.finance.enums.ProgramStatus;
 
 public interface FinancialProgramService {
 	FinancialProgramResponse saveProgram(FinancialProgramRequest request);
-    FinancialProgramResponse updateProgram(Long id, FinancialProgramRequest request);
-    String deleteProgram(Long programId);
-    FinancialProgramResponse getProgramById(Long programId);
-    List<FinancialProgramResponse> getAllPrograms();
-    List<FinancialProgramResponse> getProgramsByStatus(ProgramStatus status);
-    long getTotalPrograms();
-    long getActivePrograms();
-    Map<String, Object> getProgramSummary();
+
+	FinancialProgramResponse updateProgram(Long id, FinancialProgramRequest request);
+
+	String deleteProgram(Long programId);
+
+	FinancialProgramResponse getProgramById(Long programId);
+
+	List<FinancialProgramResponse> getAllPrograms();
+
+	List<FinancialProgramResponse> getProgramsByStatus(ProgramStatus status);
+
+	long getTotalPrograms();
+
+	long getActivePrograms();
+
+	Map<String, Object> getProgramSummary();
+
+	Map<String, Object> getProgramSummary(Long programId);
 
 }

@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import com.finance.client.SubsidyClient;
 import com.finance.client.TaxClient;
 import com.finance.dto.AnalyticsDTO;
-import com.finance.dto.ReportRequest;
 import com.finance.dto.ReportResponseDTO;
 import com.finance.enums.ReportScope;
 import com.finance.exceptions.ReportNotFoundException;
@@ -151,16 +150,16 @@ public class ReportingServiceImpl implements ReportingService {
 	}
 
 	@Override
-	public ReportResponseDTO generateReportByScope(ReportRequest request) {
-		ReportScope reportScope = request.getScope();
+	public ReportResponseDTO generateReportByScope(ReportScope scope, Long id) {
+		ReportScope reportScope = scope;
 		Map<String, Object> metrics = switch (reportScope) {
 		case TAX -> taxClient.getTaxStatistics();
 
 		case PROGRAM -> {
-			if (request.getProgramId() == null) {
+			if (id == null) {
 				yield subsidyClient.getProgramSummary();
 			} else {
-				yield subsidyClient.getProgramSummary(request.getProgramId());
+				yield subsidyClient.getProgramSummary(id);
 			}
 		}
 

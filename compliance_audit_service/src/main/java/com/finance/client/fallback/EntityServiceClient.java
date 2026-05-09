@@ -22,7 +22,7 @@ public class EntityServiceClient {
 	private final MessageUtil messageUtil;
 
 	@CircuitBreaker(name = "entityService", fallbackMethod = "validateEntityFallback")
-	public ResponseEntity<CitizenBusinessResponseDTO> validateEntity(Long entityId) {
+	public ResponseEntity<CitizenBusinessResponseDTO> getCitizenById(Long entityId) {
 		try {
 			return entityFeignClient.getCitizenById(entityId);
 		} catch (feign.FeignException.NotFound ex) {
@@ -31,7 +31,7 @@ public class EntityServiceClient {
 	}
 
 	@SuppressWarnings("unused")
-	private Boolean validateEntityFallback(Long entityId, Throwable ex) {
+	private ResponseEntity<CitizenBusinessResponseDTO> getCitizenById(Long entityId, Throwable ex) {
 		log.error("Entity service error for entityId={}. Reason: {}", entityId, ex.getMessage());
 		if (ex instanceof EntityNotFoundException entityNotFoundException) {
 			throw entityNotFoundException;

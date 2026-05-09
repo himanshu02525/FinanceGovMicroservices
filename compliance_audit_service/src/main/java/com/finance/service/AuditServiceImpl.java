@@ -9,7 +9,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import com.finance.client.UserFeignClient;
+import com.finance.client.fallback.UserServiceClient;
 import com.finance.dto.AuditCreateRequest;
 import com.finance.dto.AuditResponse;
 import com.finance.dto.AuditUpdateRequest;
@@ -40,7 +40,7 @@ public class AuditServiceImpl implements AuditService {
 	private final ModelMapper modelMapper;
 	private final MessageUtil messageUtil;
 
-	private final UserFeignClient userFeignClient;
+	private final UserServiceClient userServiceClient;
 
 	@Override
 	public List<AuditResponse> findAll() {
@@ -107,7 +107,7 @@ public class AuditServiceImpl implements AuditService {
 		log.info("Creating new audit by Officer ID: {}", auditBody.getOfficerId(), auditBody.getOfficerId());
 
 		log.debug("[UserClient] Validating Officer ID: {} via User Service", auditBody.getOfficerId());
-		ResponseEntity<UserResponseDto> response = userFeignClient.getOfficerById(auditBody.getOfficerId());
+		ResponseEntity<UserResponseDto> response = userServiceClient.getOfficerById(auditBody.getOfficerId());
 
 		if (response == null || !response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
 			log.error("[UserClient] Validation Failed: Officer ID {} not found", auditBody.getOfficerId());

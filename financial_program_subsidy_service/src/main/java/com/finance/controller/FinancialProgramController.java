@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.finance.dto.FinancialProgramRequest;
@@ -75,13 +76,10 @@ public class FinancialProgramController {
 
 	// -------- PROGRAM METRICS --------
 	@GetMapping("/summary")
-	public ResponseEntity<Map<String, Object>> getProgramSummary() {
-		return ResponseEntity.ok(service.getProgramSummary());
-	}
+	public ResponseEntity<Map<String, Object>> getProgramSummary(
+			@RequestParam(value = "id", required = false) Long id) {
 
-	@GetMapping("/summary/{programId}")
-	ResponseEntity<Map<String, Object>> getProgramSummary(@PathVariable Long programId) {
-		return ResponseEntity.ok(service.getProgramSummary(programId));
+		return ResponseEntity.ok(id != null ? service.getProgramSummary(id) : service.getProgramSummary());
 	}
 
 }

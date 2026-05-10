@@ -38,7 +38,7 @@ public class ReportingController {
 	}
 
 	@PostMapping("/generate-by-scope")
-	public ResponseEntity<ReportResponseDTO> generateReport(@RequestParam("scope") ReportScope scope,
+	public ResponseEntity<ReportResponseDTO> generateReport(@RequestParam ReportScope scope,
 			@RequestParam(required = false) Long id, @RequestParam(required = false) Integer year) {
 
 		return ResponseEntity.ok(reportingService.generateReportByScope(scope, id, year));

@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 public class ReportResponseDTO {
 	private Long reportId;
 	private ReportScope scope;
-	private String metrics;
+	private Object metrics;
 	private LocalDateTime generatedDate;
+	private String reportName;
 }

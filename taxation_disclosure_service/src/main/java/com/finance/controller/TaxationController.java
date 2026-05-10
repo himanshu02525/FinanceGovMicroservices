@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.finance.dto.TaxRequestDTO;
@@ -55,9 +56,9 @@ public class TaxationController {
 	}
 
 	@GetMapping("/tax/summary")
-	public ResponseEntity<Map<String, Object>> getTaxStatistics() {
+	public ResponseEntity<Map<String, Object>> getTaxStatistics(@RequestParam(required = false) Integer year) {
 		log.info("REST request to get aggregated tax statistics");
-		return ResponseEntity.ok(taxationService.getTaxStatistics());
+		return ResponseEntity.ok(taxationService.getTaxStatistics(year));
 	}
 
 	@GetMapping("/taxrecords/entity/{entityId}")
@@ -67,12 +68,12 @@ public class TaxationController {
 	}
 
 	@PutMapping("/taxrecords/verify/{taxId}")
-    public ResponseEntity<TaxResponseDTO> verifySingleTax(@PathVariable Long taxId, @RequestBody TaxUpdateDTO taxUpdateDTO) {
-        log.info("REST request to verify TaxRecord ID: {} with status: {}", taxId, taxUpdateDTO.getStatus());
-        TaxResponseDTO response = taxationService.verifyTaxRecordByTaxId(taxId, taxUpdateDTO);
-        log.info("TaxRecord ID: {} verification completed. New status: {}", taxId, response.getStatus());
-        return ResponseEntity.ok(response);
+	public ResponseEntity<TaxResponseDTO> verifySingleTax(@PathVariable Long taxId,
+			@RequestBody TaxUpdateDTO taxUpdateDTO) {
+		log.info("REST request to verify TaxRecord ID: {} with status: {}", taxId, taxUpdateDTO.getStatus());
+		TaxResponseDTO response = taxationService.verifyTaxRecordByTaxId(taxId, taxUpdateDTO);
+		log.info("TaxRecord ID: {} verification completed. New status: {}", taxId, response.getStatus());
+		return ResponseEntity.ok(response);
 	}
-
 
 }

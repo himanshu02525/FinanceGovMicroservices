@@ -41,9 +41,9 @@ public class ReportingServiceImpl implements ReportingService {
 
 			switch (scope) {
 
-			case TAX -> reportData.put("taxMetrics", taxClient.getTaxStatistics());
+			case TAX -> reportData.put("taxMetrics", taxClient.getTaxStatistics(null));
 
-			case PROGRAM -> reportData.put("programMetrics", subsidyClient.getProgramSummary());
+			case PROGRAM -> reportData.put("programMetrics", subsidyClient.getProgramSummary(null));
 
 			case SUBSIDY -> reportData.put("subsidyMetrics", subsidyClient.getSubsidySummary());
 			}
@@ -71,7 +71,7 @@ public class ReportingServiceImpl implements ReportingService {
 		AnalyticsDTO dto = new AnalyticsDTO();
 
 		try {
-			Map<String, Object> taxStatistics = taxClient.getTaxStatistics();
+			Map<String, Object> taxStatistics = taxClient.getTaxStatistics(null);
 			if (taxStatistics != null && !taxStatistics.isEmpty()) {
 				dto.setTaxDetails(taxStatistics);
 			}
@@ -81,7 +81,7 @@ public class ReportingServiceImpl implements ReportingService {
 		}
 
 		try {
-			Map<String, Object> programSummary = subsidyClient.getProgramSummary();
+			Map<String, Object> programSummary = subsidyClient.getProgramSummary(null);
 			if (programSummary != null && !programSummary.isEmpty()) {
 				dto.setProgramDetails(programSummary);
 			}
@@ -150,18 +150,12 @@ public class ReportingServiceImpl implements ReportingService {
 	}
 
 	@Override
-	public ReportResponseDTO generateReportByScope(ReportScope scope, Long id) {
+	public ReportResponseDTO generateReportByScope(ReportScope scope, Long id, Integer year) {
 		ReportScope reportScope = scope;
 		Map<String, Object> metrics = switch (reportScope) {
-		case TAX -> taxClient.getTaxStatistics();
+		case TAX -> taxClient.getTaxStatistics(year);
 
-		case PROGRAM -> {
-			if (id == null) {
-				yield subsidyClient.getProgramSummary();
-			} else {
-				yield subsidyClient.getProgramSummary(id);
-			}
-		}
+		case PROGRAM -> subsidyClient.getProgramSummary(id);
 
 		case SUBSIDY -> subsidyClient.getSubsidySummary();
 

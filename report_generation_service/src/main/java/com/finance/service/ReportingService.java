@@ -20,5 +20,5 @@ public interface ReportingService {
 
 	List<ReportResponseDTO> getAll();
 
-	ReportResponseDTO generateReportByScope(ReportScope scope, Long id);
+	ReportResponseDTO generateReportByScope(ReportScope scope, Long id, Integer year);
 }

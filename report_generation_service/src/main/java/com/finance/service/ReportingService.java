@@ -17,5 +17,5 @@ public interface ReportingService {
 
 	List<ReportResponseDTO> getAll();
 
-	ReportResponseDTO generateReport(ReportScope scope, Long id, Integer year);
+	ReportResponseDTO generateReport(ReportScope scope, Long id, Integer year, String reportName);
 }

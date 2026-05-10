@@ -1,6 +1,5 @@
 package com.finance.service;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -107,7 +106,7 @@ public class ReportingServiceImpl implements ReportingService {
 	}
 
 	@Override
-	public ReportResponseDTO generateReport(ReportScope scope, Long id, Integer year) {
+	public ReportResponseDTO generateReport(ReportScope scope, Long id, Integer year, String reportName) {
 
 		Map<String, Object> metrics = switch (scope) {
 		case TAX -> taxClient.getTaxStatistics(year);
@@ -119,7 +118,7 @@ public class ReportingServiceImpl implements ReportingService {
 		Report report = new Report();
 		report.setMetrics(objectMapper.valueToTree(metrics));
 		report.setScope(scope);
-		report.setGeneratedDate(LocalDateTime.now());
+		report.setReportName(reportName);
 
 		Report saved = reportRepository.save(report);
 		return mapToDTO(saved);
@@ -127,11 +126,10 @@ public class ReportingServiceImpl implements ReportingService {
 
 	private ReportResponseDTO mapToDTO(Report report) {
 
-		Object metricsObject = objectMapper.convertValue(report.getMetrics(), Object.class // ✅ FORCE REAL JSON
-		);
+		Object metricsObject = objectMapper.convertValue(report.getMetrics(), Object.class);
 
-		return new ReportResponseDTO(report.getReportId(), report.getScope(), metricsObject, // ✅ FIXED
-				report.getGeneratedDate());
+		return new ReportResponseDTO(report.getReportId(), report.getScope(), metricsObject, report.getGeneratedDate(),
+				report.getReportName());
 	}
 
 }

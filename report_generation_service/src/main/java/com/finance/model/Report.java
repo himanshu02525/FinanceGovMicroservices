@@ -2,6 +2,7 @@ package com.finance.model;
 
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -43,6 +44,10 @@ public class Report {
 	@Column(columnDefinition = "json")
 	private JsonNode metrics;
 
-	@Column(nullable = false)
+	@Column(nullable = false, columnDefinition = "TIMESTAMP")
+	@CreationTimestamp
 	private LocalDateTime generatedDate;
+
+	@Column(nullable = true)
+	private String reportName;
 }

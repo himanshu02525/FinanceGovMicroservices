@@ -16,4 +16,5 @@ public class ReportResponseDTO {
 	private ReportScope scope;
 	private Object metrics;
 	private LocalDateTime generatedDate;
+	private String reportName;
 }

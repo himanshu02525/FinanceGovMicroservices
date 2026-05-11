@@ -45,6 +45,7 @@ public class TaxationServiceImpl implements TaxationService {
 	private final UserFeignClient userFeignClient;
 	private final NotificationFeignClient notificationFeignClient;
 	private final ComplianceFeignClient complianceFeignClient;
+	private final DisclosureService disclosureService;
 
 	@Override
 	@Transactional
@@ -262,6 +263,8 @@ public class TaxationServiceImpl implements TaxationService {
 		Double lowestTax = Optional
 				.ofNullable(year == null ? taxRepository.findMinTax() : taxRepository.findMinTax(year)).orElse(0.0);
 
+		// Discloure Data
+		Map<String, Object> discloureSummary = disclosureService.getSummary();
 		// ---- BUILD RESPONSE ----
 
 		Map<String, Object> summary = new HashMap<>();
@@ -289,6 +292,7 @@ public class TaxationServiceImpl implements TaxationService {
 		response.put("status", status);
 		response.put("metrics", metrics);
 		response.put("revenue", revenue);
+		response.put("discloureSummary", discloureSummary);
 
 		return response;
 	}

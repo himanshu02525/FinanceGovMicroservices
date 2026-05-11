@@ -1,6 +1,5 @@
 package com.finance.client.fallback;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -35,8 +34,8 @@ public class TaxServiceClient {
 			throw new TaxRecordNotFoundException("Tax record not found for ID: " + taxId);
 		}
 
-		// Other failures (service down, timeout, etc.)
-		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+		throw new ServiceUnavailableException(messageUtil.getMessage("external.service.unavailable", "Taxation"));
+
 	}
 
 	@CircuitBreaker(name = "taxService", fallbackMethod = "getTaxStatusUpdateFallback")

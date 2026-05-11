@@ -18,4 +18,6 @@ public interface ReportingService {
 	List<ReportResponseDTO> getAll();
 
 	ReportResponseDTO generateReport(ReportScope scope, Long id, Integer year, String reportName);
+
+	AnalyticsDTO generateReportAll(Long programId, Integer taxYear, String reportName);
 }

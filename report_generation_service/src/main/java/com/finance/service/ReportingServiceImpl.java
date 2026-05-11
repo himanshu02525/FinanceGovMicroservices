@@ -8,7 +8,6 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finance.client.SubsidyClient;
 import com.finance.client.TaxClient;
@@ -109,37 +108,38 @@ public class ReportingServiceImpl implements ReportingService {
 
 	@Override
 	public ReportResponseDTO generateReport(ReportScope scope, Long id, Integer year, String reportName) {
-		Map<String, Object> metrics;
+		// 1. Initialize the map to hold nested metric objects
+		Map<String, Object> reportMetrics = new HashMap<>();
 
 		if (scope == ReportScope.OVERALL) {
-			// Aggregated logic: Call all clients
-			AnalyticsDTO masterAnalytics = new AnalyticsDTO();
-			masterAnalytics.setTaxDetails(taxClient.getTaxStatistics(year));
-			masterAnalytics.setSubsidyDetails(subsidyClient.getSubsidySummary());
-			masterAnalytics.setProgramDetails(subsidyClient.getProgramSummary(id));
-
-			// Convert the DTO to a Map or Tree for the entity
-			metrics = objectMapper.convertValue(masterAnalytics, new TypeReference<Map<String, Object>>() {
-			});
+			// Populating multiple professional key-object pairs
+			reportMetrics.put("taxAnalytics", taxClient.getTaxStatistics(year));
+			reportMetrics.put("subsidyOverview", subsidyClient.getSubsidySummary());
+			reportMetrics.put("programSpecification", subsidyClient.getProgramSummary(id));
 		} else {
-			// Atomic logic: Call specific client
-			metrics = switch (scope) {
-			case TAX -> taxClient.getTaxStatistics(year);
-			case PROGRAM -> subsidyClient.getProgramSummary(id);
-			case SUBSIDY -> subsidyClient.getSubsidySummary();
-			default -> throw new IllegalArgumentException("Unsupported scope: " + scope);
-			};
+			// For specific scopes, we still wrap the result in a descriptive key
+			// to maintain the { "key": { "data" } } format requested
+			switch (scope) {
+			case TAX -> reportMetrics.put("taxAnalytics", taxClient.getTaxStatistics(year));
+			case PROGRAM -> reportMetrics.put("programSpecification", subsidyClient.getProgramSummary(id));
+			case SUBSIDY -> reportMetrics.put("subsidyOverview", subsidyClient.getSubsidySummary());
+			default -> throw new IllegalArgumentException("Unsupported report scope: " + scope);
+			}
 		}
 
-		// Common Persistence Logic
+		// 2. Persistence Logic
 		Report report = new Report();
 		report.setGeneratedDate(LocalDateTime.now());
 		report.setReportName(reportName);
 		report.setScope(scope);
-		report.setMetrics(objectMapper.valueToTree(metrics));
 
-		Report saved = reportRepository.save(report);
-		return mapToDTO(saved);
+		// Converts the Map into a JsonNode for your @JdbcTypeCode(SqlTypes.JSON) field
+		report.setMetrics(objectMapper.valueToTree(reportMetrics));
+
+		Report savedReport = reportRepository.save(report);
+
+		// 3. Return the mapped DTO
+		return mapToDTO(savedReport);
 	}
 
 	private ReportResponseDTO mapToDTO(Report report) {

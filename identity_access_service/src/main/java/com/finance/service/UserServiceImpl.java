@@ -97,6 +97,15 @@ public class UserServiceImpl implements UserService {
             existingUser.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
         }
 
+        // ✅ FIX ROLE UPDATE PROPERLY
+        if (updatedUser.getRole() != null) {
+            Role role = roleRepository
+                .findByRoleName(updatedUser.getRole().getRoleName())
+                .orElseThrow(() -> new RuntimeException("Role not found"));
+
+            existingUser.setRole(role);
+        }
+
         return userRepository.save(existingUser);
     }
 
@@ -109,10 +118,17 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new UserNotFoundException("Cannot delete: User not found with ID: " + id);
+        User user = userRepository.findById(id)
+            .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + id));
+
+        if (user.getRole().getRoleName() == RoleType.ROLE_ADMIN) {
+            throw new RuntimeException("Admin accounts cannot be deleted.");
         }
-        userRepository.deleteById(id);
+
+        // ✅ SOFT DELETE
+        user.setStatus("INACTIVE");
+
+        userRepository.save(user);
     }
 
     @Override
@@ -160,5 +176,17 @@ public class UserServiceImpl implements UserService {
         }
 
         userRepository.delete(user);
+    }
+
+    @Override
+    public void restoreUser(Long id) {
+        User user = findUserById(id);
+
+        if ("ACTIVE".equals(user.getStatus())) {
+            throw new RuntimeException("User is already active");
+        }
+
+        user.setStatus("ACTIVE");
+        userRepository.save(user);
     }
 }

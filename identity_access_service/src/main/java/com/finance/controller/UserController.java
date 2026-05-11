@@ -40,6 +40,13 @@ public class UserController {
         log.info("Fetching user DTO for ID: {}", id);
         return ResponseEntity.ok(userService.getUserById(id));
     }
+    
+    @PutMapping("/{id}/restore")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> restoreUser(@PathVariable Long id) {
+        userService.restoreUser(id);
+        return ResponseEntity.ok("User restored successfully");
+    }
 
     // =============================
     // GET USER BY EMAIL (INTERNAL)

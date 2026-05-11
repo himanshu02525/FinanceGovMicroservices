@@ -50,13 +50,19 @@ public class JwtAuthenticationWebFilterConfig {
             }
 
             Authentication authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            jwtUtil.extractUsername(token),
-                            token,
-                            jwtUtil.extractRoles(token).stream()
-                                    .map(SimpleGrantedAuthority::new)
-                                    .collect(Collectors.toList())
-                    );
+            	    new UsernamePasswordAuthenticationToken(
+            	        jwtUtil.extractUsername(token),
+            	        token,
+            	        jwtUtil.extractRoles(token).stream()
+            	            .map(role -> {
+            	                if (!role.startsWith("ROLE_")) {
+            	                    return new SimpleGrantedAuthority("ROLE_" + role);
+            	                }
+            	                return new SimpleGrantedAuthority(role);
+            	            })
+            	            .collect(Collectors.toList())
+            	    );
+
 
             return Mono.just(authentication);
         });

@@ -8,6 +8,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finance.client.SubsidyClient;
 import com.finance.client.TaxClient;
@@ -108,55 +109,37 @@ public class ReportingServiceImpl implements ReportingService {
 
 	@Override
 	public ReportResponseDTO generateReport(ReportScope scope, Long id, Integer year, String reportName) {
+		Map<String, Object> metrics;
 
-		Map<String, Object> metrics = switch (scope) {
-		case TAX -> taxClient.getTaxStatistics(year);
-		case PROGRAM -> subsidyClient.getProgramSummary(id);
-		case SUBSIDY -> subsidyClient.getSubsidySummary();
-		default -> throw new IllegalArgumentException("Unexpected value: " + scope);
-		};
+		if (scope == ReportScope.OVERALL) {
+			// Aggregated logic: Call all clients
+			AnalyticsDTO masterAnalytics = new AnalyticsDTO();
+			masterAnalytics.setTaxDetails(taxClient.getTaxStatistics(year));
+			masterAnalytics.setSubsidyDetails(subsidyClient.getSubsidySummary());
+			masterAnalytics.setProgramDetails(subsidyClient.getProgramSummary(id));
 
+			// Convert the DTO to a Map or Tree for the entity
+			metrics = objectMapper.convertValue(masterAnalytics, new TypeReference<Map<String, Object>>() {
+			});
+		} else {
+			// Atomic logic: Call specific client
+			metrics = switch (scope) {
+			case TAX -> taxClient.getTaxStatistics(year);
+			case PROGRAM -> subsidyClient.getProgramSummary(id);
+			case SUBSIDY -> subsidyClient.getSubsidySummary();
+			default -> throw new IllegalArgumentException("Unsupported scope: " + scope);
+			};
+		}
+
+		// Common Persistence Logic
 		Report report = new Report();
-		report.setMetrics(objectMapper.valueToTree(metrics));
-		report.setScope(scope);
+		report.setGeneratedDate(LocalDateTime.now());
 		report.setReportName(reportName);
+		report.setScope(scope);
+		report.setMetrics(objectMapper.valueToTree(metrics));
 
 		Report saved = reportRepository.save(report);
 		return mapToDTO(saved);
-	}
-
-	@Override
-	public AnalyticsDTO generateReportAll(Long programId, Integer taxYear, String reportName) {
-
-		log.info("Generating and saving analytics report for Program ID: {} and Tax Year: {}", programId, taxYear);
-
-		// 1. Fetch data from all clients
-		Map<String, Object> taxAnalytics = taxClient.getTaxStatistics(taxYear);
-		Map<String, Object> subsidyAnalytics = subsidyClient.getSubsidySummary();
-		Map<String, Object> programSpecificAnalytics = subsidyClient.getProgramSummary(programId);
-
-		// 2. Map data to the DTO for the frontend
-		AnalyticsDTO masterAnalyticsResponse = new AnalyticsDTO();
-		masterAnalyticsResponse.setTaxDetails(taxAnalytics);
-		masterAnalyticsResponse.setSubsidyDetails(subsidyAnalytics);
-		masterAnalyticsResponse.setProgramDetails(programSpecificAnalytics);
-
-		// 3. PERSISTENCE: Save the report to the database
-		try {
-			Report reportEntity = new Report();
-			reportEntity.setGeneratedDate(LocalDateTime.now());
-			reportEntity.setReportName(reportName);
-			reportEntity.setMetrics(objectMapper.valueToTree(masterAnalyticsResponse));
-			reportEntity.setScope(ReportScope.OVERALL);
-			reportRepository.save(reportEntity);
-			log.info("Report successfully archived in database.");
-		} catch (Exception e) {
-			log.error("Failed to serialize report for saving: {}", e.getMessage());
-			// We still return the response even if saving fails, or throw an error based on
-			// your needs
-		}
-
-		return masterAnalyticsResponse;
 	}
 
 	private ReportResponseDTO mapToDTO(Report report) {

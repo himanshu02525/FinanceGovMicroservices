@@ -10,11 +10,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.finance.dto.TaxRequestDTO;
 import com.finance.dto.TaxResponseDTO;
 import com.finance.dto.TaxUpdateDTO;
+import com.finance.enums.TaxStatus;
 import com.finance.service.TaxationService;
 
 import jakarta.validation.Valid;
@@ -72,6 +74,14 @@ public class TaxationController {
         TaxResponseDTO response = taxationService.verifyTaxRecordByTaxId(taxId, taxUpdateDTO);
         log.info("TaxRecord ID: {} verification completed. New status: {}", taxId, response.getStatus());
         return ResponseEntity.ok(response);
+	}
+	
+	@PutMapping("/taxrecords/pay/{taxId}")
+	public ResponseEntity<TaxResponseDTO> payTaxRecord(@PathVariable Long taxId) {
+		log.info("REST request to pay TaxRecord ID: {}", taxId);
+		TaxResponseDTO response = taxationService.payTaxRecordByTaxId(taxId);
+		log.info("TaxRecord ID: {} payment completed. New status: {}", taxId, response.getStatus());
+		return ResponseEntity.ok(response);
 	}
 
 

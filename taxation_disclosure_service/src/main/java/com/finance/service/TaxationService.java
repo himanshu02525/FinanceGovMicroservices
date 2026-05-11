@@ -6,6 +6,7 @@ import java.util.Map;
 import com.finance.dto.TaxRequestDTO;
 import com.finance.dto.TaxResponseDTO;
 import com.finance.dto.TaxUpdateDTO;
+import com.finance.enums.TaxStatus;
 
 public interface TaxationService {
     // Create record and notify of pending status
@@ -18,6 +19,8 @@ public interface TaxationService {
     TaxResponseDTO getTaxRecordByTaxId(Long taxId); 
     
     List<TaxResponseDTO> getAllTaxRecordsByEntityId(Long entityId);
+    
+    TaxResponseDTO payTaxRecordByTaxId(Long taxId);
     
 
     // Officer: Validate payment and notify user of success

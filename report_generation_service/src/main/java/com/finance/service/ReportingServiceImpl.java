@@ -1,161 +1,153 @@
 package com.finance.service;
 
 import java.time.LocalDateTime;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finance.client.SubsidyClient;
 import com.finance.client.TaxClient;
-import com.finance.dto.ReportAnalyticsDTO;
+import com.finance.dto.AnalyticsDTO;
+import com.finance.dto.ReportResponseDTO;
 import com.finance.enums.ReportScope;
 import com.finance.exceptions.ReportNotFoundException;
 import com.finance.model.Report;
 import com.finance.repository.ReportRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class ReportingServiceImpl implements ReportingService {
 
-	private static final Logger log = LoggerFactory.getLogger(ReportingServiceImpl.class);
-
 	private final ReportRepository reportRepository;
-	private final SubsidyClient subsidyClient;
 	private final TaxClient taxClient;
+	private final SubsidyClient subsidyClient;
+	private final ObjectMapper objectMapper;
 
-	private final ObjectMapper objectMapper = new ObjectMapper(); // ✅ for JSON
-
-	// ✅ Generate Report
 	@Override
-	public Report generateReport(ReportScope scope) {
+	public AnalyticsDTO getAnalytics() {
 
-		log.info("Generating report for scope: {}", scope);
-
-		Report report = new Report();
-		report.setScope(scope);
-		report.setGeneratedDate(LocalDateTime.now());
-
-		Map<String, Object> metrics = new HashMap<>();
+		AnalyticsDTO dto = new AnalyticsDTO();
 
 		try {
-
-			if (scope == ReportScope.PROGRAM) {
-				Map<String, Object> program = subsidyClient.getProgramSummary();
-				metrics.putAll(program);
+			Map<String, Object> taxStatistics = taxClient.getTaxStatistics(null);
+			if (taxStatistics != null && !taxStatistics.isEmpty()) {
+				dto.setTaxDetails(taxStatistics);
 			}
-
-			if (scope == ReportScope.SUBSIDY) {
-				Map<String, Object> subsidy = subsidyClient.getSubsidySummary();
-				metrics.putAll(subsidy);
-			}
-
-			if (scope == ReportScope.TAX) {
-				Map<String, Object> tax = taxClient.getTaxStatistics();
-				metrics.putAll(tax);
-			}
-
-			// ✅ Convert Map → JSON String
-			String metricsJson = objectMapper.writeValueAsString(metrics);
-			report.setMetrics(metricsJson);
-
 		} catch (Exception e) {
-			log.error("Error generating report metrics", e);
-			throw new RuntimeException("Failed to generate report");
+			log.error("Tax service failed", e);
+			dto.setTaxDetails(null);
 		}
 
-		return reportRepository.save(report);
+		try {
+			Map<String, Object> programSummary = subsidyClient.getProgramSummary(null);
+			if (programSummary != null && !programSummary.isEmpty()) {
+				dto.setProgramDetails(programSummary);
+			}
+		} catch (Exception e) {
+			log.error("Program service failed", e);
+			dto.setProgramDetails(null);
+		}
+
+		try {
+			Map<String, Object> subsidySummary = subsidyClient.getSubsidySummary();
+			if (subsidySummary != null && !subsidySummary.isEmpty()) {
+				dto.setSubsidyDetails(subsidySummary);
+			}
+		} catch (Exception e) {
+			dto.setSubsidyDetails(null);
+		}
+
+		return dto;
 	}
 
-	// ✅ Get reports by scope
 	@Override
-	public List<Report> getReportsByScope(ReportScope scope) {
-		return reportRepository.findByScope(scope);
+	public ReportResponseDTO getReportById(Long id) {
+
+		log.info("Fetching detailed report for ID: {}", id);
+
+		Report report = reportRepository.findById(id)
+				.orElseThrow(() -> new ReportNotFoundException("Report not found with id: " + id));
+
+		return mapToDTO(report);
 	}
 
-	// ✅ Get single report
 	@Override
-	public Report getReportById(Long id) {
-		return reportRepository.findById(id)
-				.orElseThrow(() -> new ReportNotFoundException("Report not found with ID: " + id));
-	}
+	public Map<ReportScope, ReportResponseDTO> getSummaryReports() {
 
-	// ✅ Generate all reports
-	@Override
-	public Map<ReportScope, Report> getSummaryReports() {
+		log.info("Generating summary of latest reports per scope");
 
-		Map<ReportScope, Report> summary = new EnumMap<>(ReportScope.class);
+		Map<ReportScope, ReportResponseDTO> summary = new HashMap<>();
 
-		summary.put(ReportScope.PROGRAM, generateReport(ReportScope.PROGRAM));
-		summary.put(ReportScope.SUBSIDY, generateReport(ReportScope.SUBSIDY));
-		summary.put(ReportScope.TAX, generateReport(ReportScope.TAX));
+		for (ReportScope scope : ReportScope.values()) {
+
+			reportRepository.findTopByScopeOrderByGeneratedDateDesc(scope)
+					.ifPresent(report -> summary.put(scope, mapToDTO(report)));
+		}
 
 		return summary;
 	}
 
 	@Override
-	public ReportAnalyticsDTO getAnalytics() {
+	public List<ReportResponseDTO> getAll() {
+		List<Report> reports = reportRepository.findAll();
 
-		try {
-
-			Report programReport = getLatestReport(ReportScope.PROGRAM);
-			Report subsidyReport = getLatestReport(ReportScope.SUBSIDY);
-			Report taxReport = getLatestReport(ReportScope.TAX);
-
-			Map<String, Object> programMetrics = programReport != null
-					? objectMapper.readValue(programReport.getMetrics(), Map.class)
-					: new HashMap<>();
-
-			Map<String, Object> subsidyMetrics = subsidyReport != null
-					? objectMapper.readValue(subsidyReport.getMetrics(), Map.class)
-					: new HashMap<>();
-
-			Map<String, Object> taxMetrics = taxReport != null
-					? objectMapper.readValue(taxReport.getMetrics(), Map.class)
-					: new HashMap<>();
-
-			// ✅ Extract values
-			int totalPrograms = ((Number) programMetrics.getOrDefault("totalPrograms", 0)).intValue();
-			int activePrograms = ((Number) programMetrics.getOrDefault("activePrograms", 0)).intValue();
-			double budgetUsed = ((Number) programMetrics.getOrDefault("budgetUsed", 0)).doubleValue();
-
-			int applicationsReceived = ((Number) subsidyMetrics.getOrDefault("applicationsReceived", 0)).intValue();
-			int approvedSubsidies = ((Number) subsidyMetrics.getOrDefault("approvedSubsidies", 0)).intValue();
-			double amountDistributed = ((Number) subsidyMetrics.getOrDefault("amountDistributed", 0)).doubleValue();
-
-			int totalTaxpayers = ((Number) taxMetrics.getOrDefault("totalTaxpayers", 0)).intValue();
-			double revenueCollected = ((Number) taxMetrics.getOrDefault("revenueCollected", 0)).doubleValue();
-
-			// ✅ Calculations
-			double programUtilization = totalPrograms > 0 ? (activePrograms * 100.0) / totalPrograms : 0;
-
-			double approvalRate = applicationsReceived > 0 ? (approvedSubsidies * 100.0) / applicationsReceived : 0;
-
-			double avgSubsidy = approvedSubsidies > 0 ? amountDistributed / approvedSubsidies : 0;
-
-			double avgRevenue = totalTaxpayers > 0 ? revenueCollected / totalTaxpayers : 0;
-
-			return new ReportAnalyticsDTO(totalPrograms, activePrograms, budgetUsed, programUtilization,
-
-					applicationsReceived, approvedSubsidies, approvalRate, avgSubsidy,
-
-					totalTaxpayers, revenueCollected, avgRevenue);
-
-		} catch (Exception e) {
-			throw new RuntimeException("Error calculating analytics", e);
+		if (reports.isEmpty()) {
+			throw new ReportNotFoundException("No reports currently exist in the database.");
 		}
+		return reports.stream().map(this::mapToDTO).toList();
 	}
 
-	// ✅ Helper method
-	private Report getLatestReport(ReportScope scope) {
-		List<Report> reports = reportRepository.findByScope(scope);
-		return reports.isEmpty() ? null : reports.get(reports.size() - 1);
+	@Override
+	public ReportResponseDTO generateReport(ReportScope scope, Long id, Integer year, String reportName) {
+		// 1. Initialize the map to hold nested metric objects
+		Map<String, Object> reportMetrics = new HashMap<>();
+
+		if (scope == ReportScope.OVERALL) {
+			// Populating multiple professional key-object pairs
+			reportMetrics.put("taxAnalytics", taxClient.getTaxStatistics(year));
+			reportMetrics.put("subsidyOverview", subsidyClient.getSubsidySummary());
+			reportMetrics.put("programSpecification", subsidyClient.getProgramSummary(id));
+		} else {
+			// For specific scopes, we still wrap the result in a descriptive key
+			// to maintain the { "key": { "data" } } format requested
+			switch (scope) {
+			case TAX -> reportMetrics.put("taxAnalytics", taxClient.getTaxStatistics(year));
+			case PROGRAM -> reportMetrics.put("programSpecification", subsidyClient.getProgramSummary(id));
+			case SUBSIDY -> reportMetrics.put("subsidyOverview", subsidyClient.getSubsidySummary());
+			default -> throw new IllegalArgumentException("Unsupported report scope: " + scope);
+			}
+		}
+
+		// 2. Persistence Logic
+		Report report = new Report();
+		report.setGeneratedDate(LocalDateTime.now());
+		report.setReportName(reportName);
+		report.setScope(scope);
+
+		// Converts the Map into a JsonNode for your @JdbcTypeCode(SqlTypes.JSON) field
+		report.setMetrics(objectMapper.valueToTree(reportMetrics));
+
+		Report savedReport = reportRepository.save(report);
+
+		// 3. Return the mapped DTO
+		return mapToDTO(savedReport);
 	}
+
+	private ReportResponseDTO mapToDTO(Report report) {
+
+		Object metricsObject = objectMapper.convertValue(report.getMetrics(), Object.class);
+
+		return new ReportResponseDTO(report.getReportId(), report.getScope(), metricsObject, report.getGeneratedDate(),
+				report.getReportName());
+	}
+
 }

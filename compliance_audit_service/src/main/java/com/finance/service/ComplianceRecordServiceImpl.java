@@ -55,6 +55,25 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 	private final TaxServiceClient taxServiceClient;
 	private final EntityFeignClient entityFeignClient;
 
+	private void validateExternalDetails(Long refId, ComplianceRecordType complianceRecordType) {
+		switch (complianceRecordType) {
+		case TAX: {
+			taxServiceClient.getTaxById(refId);
+			break;
+		}
+		case SUBSIDY: {
+			programSubsidyFeignClient.getSubsidyById(refId);
+			break;
+		}
+		case PROGRAM: {
+			programSubsidyFeignClient.getProgramById(refId);
+			break;
+		}
+		default:
+			throw new IllegalArgumentException("Unexpected value: " + complianceRecordType);
+		}
+	}
+
 	/* ================= FETCH EXTERNAL DETAILS ================= */
 	private void fetchExternalDetails(ComplianceResponse response) {
 		Long lookupId = response.getReferenceId();
@@ -136,6 +155,8 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 	@Override
 	public ComplianceResponse create(ComplianceCreateRequest request) {
 		log.info(" Creating new record for Entity ID: {} of Type: {}", request.getEntityId(), request.getType());
+		validateExternalDetails(request.getReferenceId(), request.getType());
+		entityFeignClient.getCitizenById(request.getEntityId());
 		ComplianceRecord saved = repository.save(modelMapper.map(request, ComplianceRecord.class));
 		log.info(" Successfully saved new compliance record with Generated ID: {}", saved.getComplianceId());
 		return modelMapper.map(saved, ComplianceResponse.class);
@@ -226,7 +247,7 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 			try {
 				SubsidyUpdateRequest subsidyUpdateRequest = new SubsidyUpdateRequest();
 
-				ResponseEntity<SubsidyResponse> subsidy = programSubsidyFeignClient.getSubsidyById(refId);
+				programSubsidyFeignClient.getSubsidyById(refId);
 				if (complianceRecordResult == ComplianceRecordResult.FAIL) {
 					subsidyUpdateRequest.setStatus(SubsidyStatus.CANCELLED);
 

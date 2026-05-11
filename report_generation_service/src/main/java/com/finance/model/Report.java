@@ -2,6 +2,11 @@ package com.finance.model;
 
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import com.fasterxml.jackson.databind.JsonNode;
 import com.finance.enums.ReportScope;
 
 import jakarta.persistence.Column;
@@ -11,16 +16,17 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "reports")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -32,15 +38,16 @@ public class Report {
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
-	private ReportScope scope; // PROGRAM / SUBSIDY / TAX
+	private ReportScope scope;
 
-	// ✅ Store all analytics data in one column
-	@Lob
-	@Column(columnDefinition = "TEXT")
-	private String metrics;
-	// Example:
-	// {"totalPrograms":50, "activePrograms":30, "budgetUsed":200000}
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(columnDefinition = "json")
+	private JsonNode metrics;
 
-	@Column(nullable = false)
+	@Column(nullable = false, columnDefinition = "TIMESTAMP")
+	@CreationTimestamp
 	private LocalDateTime generatedDate;
+
+	@Column(nullable = true)
+	private String reportName;
 }

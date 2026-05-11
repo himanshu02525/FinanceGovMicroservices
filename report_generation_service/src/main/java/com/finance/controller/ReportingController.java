@@ -40,6 +40,12 @@ public class ReportingController {
 		return ResponseEntity.ok(reportingService.generateReport(scope, id, year, reportName));
 	}
 
+	@PostMapping("/generate/{id}/{year}")
+	public ResponseEntity<AnalyticsDTO> generateReportAll(@PathVariable Long id, @PathVariable Integer year,
+			@RequestParam(required = false) String reportName) {
+		return ResponseEntity.ok(reportingService.generateReportAll(id, year, reportName));
+	}
+
 	@GetMapping("/{id}")
 	public ResponseEntity<ReportResponseDTO> getReportById(@PathVariable Long id) {
 		return ResponseEntity.ok(reportingService.getReportById(id));

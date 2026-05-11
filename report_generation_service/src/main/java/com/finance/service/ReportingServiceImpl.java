@@ -1,5 +1,6 @@
 package com.finance.service;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -122,6 +123,40 @@ public class ReportingServiceImpl implements ReportingService {
 
 		Report saved = reportRepository.save(report);
 		return mapToDTO(saved);
+	}
+
+	@Override
+	public AnalyticsDTO generateReportAll(Long programId, Integer taxYear, String reportName) {
+
+		log.info("Generating and saving analytics report for Program ID: {} and Tax Year: {}", programId, taxYear);
+
+		// 1. Fetch data from all clients
+		Map<String, Object> taxAnalytics = taxClient.getTaxStatistics(taxYear);
+		Map<String, Object> subsidyAnalytics = subsidyClient.getSubsidySummary();
+		Map<String, Object> programSpecificAnalytics = subsidyClient.getProgramSummary(programId);
+
+		// 2. Map data to the DTO for the frontend
+		AnalyticsDTO masterAnalyticsResponse = new AnalyticsDTO();
+		masterAnalyticsResponse.setTaxDetails(taxAnalytics);
+		masterAnalyticsResponse.setSubsidyDetails(subsidyAnalytics);
+		masterAnalyticsResponse.setProgramDetails(programSpecificAnalytics);
+
+		// 3. PERSISTENCE: Save the report to the database
+		try {
+			Report reportEntity = new Report();
+			reportEntity.setGeneratedDate(LocalDateTime.now());
+			reportEntity.setReportName(reportName);
+			reportEntity.setMetrics(objectMapper.valueToTree(masterAnalyticsResponse));
+			reportEntity.setScope(ReportScope.OVERALL);
+			reportRepository.save(reportEntity);
+			log.info("Report successfully archived in database.");
+		} catch (Exception e) {
+			log.error("Failed to serialize report for saving: {}", e.getMessage());
+			// We still return the response even if saving fails, or throw an error based on
+			// your needs
+		}
+
+		return masterAnalyticsResponse;
 	}
 
 	private ReportResponseDTO mapToDTO(Report report) {

@@ -1,6 +1,7 @@
 package com.finance.service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -13,10 +14,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.finance.dto.FinancialProgramRequest;
 import com.finance.dto.FinancialProgramResponse;
+import com.finance.enums.ApplicationStatus;
 import com.finance.enums.ProgramStatus;
+import com.finance.enums.SubsidyStatus;
 import com.finance.exceptions.ProgramNotFoundException;
 import com.finance.model.FinancialProgram;
 import com.finance.repository.FinancialProgramRepository;
+import com.finance.repository.SubsidyApplicationRepository;
+import com.finance.repository.SubsidyRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +32,8 @@ import lombok.extern.slf4j.Slf4j;
 public class FinancialProgramServiceImpl implements FinancialProgramService {
 
 	private final FinancialProgramRepository repository;
+	private final SubsidyApplicationRepository subsidyApplicationRepository;
+	private final SubsidyRepository subsidyRepository;
 
 	@Override
 	@Transactional
@@ -149,10 +156,12 @@ public class FinancialProgramServiceImpl implements FinancialProgramService {
 				program.getBudget(), program.getStatus().name());
 	}
 
+	@Override
 	public long getTotalPrograms() {
 		return repository.count();
 	}
 
+	@Override
 	public long getActivePrograms() {
 		return repository.countByStatus(ProgramStatus.ACTIVE);
 	}
@@ -175,6 +184,82 @@ public class FinancialProgramServiceImpl implements FinancialProgramService {
 		summary.put("totalBudget", totalBudget);
 
 		return summary;
+	}
+
+	@Override
+	public Map<String, Object> getProgramSummary(Long programId) {
+
+		FinancialProgramResponse programDetails = getProgramById(programId);
+
+		BigDecimal budget = BigDecimal.valueOf(programDetails.getBudget());
+
+		BigDecimal approvedAmount = Optional.ofNullable(subsidyRepository.sumApprovedAmountByProgramId(programId))
+				.orElse(BigDecimal.ZERO);
+
+		BigDecimal remainingAmount = budget.subtract(approvedAmount);
+
+		Map<String, Object> response = new HashMap<>();
+
+		// ✅ Subsidy Status Counts
+		Map<String, Long> subsidyStatusCounts = new HashMap<>();
+		for (SubsidyStatus status : SubsidyStatus.values()) {
+			long count = subsidyRepository.countByProgramProgramIdAndStatus(programId, status);
+
+			subsidyStatusCounts.put(status.name(), count);
+		}
+
+		// ✅ Application Status Counts
+		Map<String, Long> applicationStatusCounts = new HashMap<>();
+		long totalApplications = 0;
+
+		for (ApplicationStatus status : ApplicationStatus.values()) {
+			long count = subsidyApplicationRepository.countByProgramAndStatus(programId, status);
+
+			applicationStatusCounts.put(status.name(), count);
+			totalApplications += count;
+		}
+
+		// ✅ Approved Applications
+		long approvedApplications = applicationStatusCounts.getOrDefault(ApplicationStatus.APPROVED.name(), 0L);
+
+		// ✅ Budget Utilization %
+		BigDecimal utilizationPercent = budget.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ZERO
+				: approvedAmount.divide(budget, 2, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+
+		// ✅ Remaining Budget %
+		BigDecimal remainingPercent = budget.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ZERO
+				: remainingAmount.divide(budget, 2, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+
+		// ✅ Approval Rate %
+		BigDecimal approvalRate = totalApplications == 0 ? BigDecimal.ZERO
+				: BigDecimal.valueOf(approvedApplications)
+						.divide(BigDecimal.valueOf(totalApplications), 2, RoundingMode.HALF_UP)
+						.multiply(BigDecimal.valueOf(100));
+
+		// ✅ Average Subsidy Amount
+		BigDecimal avgSubsidyAmount = approvedApplications == 0 ? BigDecimal.ZERO
+				: approvedAmount.divide(BigDecimal.valueOf(approvedApplications), 2, RoundingMode.HALF_UP);
+
+		// ✅ Final Response
+		response.put("programDetails", programDetails);
+
+		response.put("budget", budget);
+		response.put("approvedAmount", approvedAmount);
+		response.put("remainingAmount", remainingAmount);
+
+		response.put("budgetUtilizationPercent", utilizationPercent);
+		response.put("remainingBudgetPercent", remainingPercent);
+
+		response.put("totalApplications", totalApplications);
+		response.put("approvedApplications", approvedApplications);
+		response.put("approvalRate", approvalRate);
+
+		response.put("averageSubsidyAmount", avgSubsidyAmount);
+
+		response.put("subsidyStatusDistribution", subsidyStatusCounts);
+		response.put("applicationStatusDistribution", applicationStatusCounts);
+
+		return response;
 	}
 
 }

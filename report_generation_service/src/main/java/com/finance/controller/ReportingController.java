@@ -32,14 +32,12 @@ public class ReportingController {
 		return ResponseEntity.ok(reportingService.getAll());
 	}
 
-	@PostMapping("/generate")
-	public ResponseEntity<ReportResponseDTO> generateReport(@RequestParam ReportScope scope) {
-		return ResponseEntity.ok(reportingService.generateReport(scope));
-	}
+	@PostMapping("/generate-by-scope")
+	public ResponseEntity<ReportResponseDTO> generateReport(@RequestParam ReportScope scope,
+			@RequestParam(required = false) Long id, @RequestParam(required = false) Integer year,
+			@RequestParam(required = false) String reportName) {
 
-	@GetMapping("/scope/{scope}")
-	public ResponseEntity<List<ReportResponseDTO>> getReportsByScope(@PathVariable ReportScope scope) {
-		return ResponseEntity.ok(reportingService.getReportsByScope(scope));
+		return ResponseEntity.ok(reportingService.generateReport(scope, id, year, reportName));
 	}
 
 	@GetMapping("/{id}")

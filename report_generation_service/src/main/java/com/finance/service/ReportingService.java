@@ -8,9 +8,6 @@ import com.finance.dto.ReportResponseDTO;
 import com.finance.enums.ReportScope;
 
 public interface ReportingService {
-	ReportResponseDTO generateReport(ReportScope scope);
-
-	List<ReportResponseDTO> getReportsByScope(ReportScope scope);
 
 	ReportResponseDTO getReportById(Long id);
 
@@ -19,4 +16,7 @@ public interface ReportingService {
 	AnalyticsDTO getAnalytics();
 
 	List<ReportResponseDTO> getAll();
+
+	ReportResponseDTO generateReport(ReportScope scope, Long id, Integer year, String reportName);
+
 }

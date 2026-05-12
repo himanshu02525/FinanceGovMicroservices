@@ -1,7 +1,5 @@
 package com.finance.enums;
 
 public enum ReportScope {
-    PROGRAM,
-    SUBSIDY,
-    TAX
+	PROGRAM, SUBSIDY, TAX, OVERALL
 }

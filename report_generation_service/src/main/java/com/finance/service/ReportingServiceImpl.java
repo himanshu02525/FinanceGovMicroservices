@@ -5,9 +5,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finance.client.SubsidyClient;
 import com.finance.client.TaxClient;
 import com.finance.dto.AnalyticsDTO;
@@ -17,10 +18,8 @@ import com.finance.exceptions.ReportNotFoundException;
 import com.finance.model.Report;
 import com.finance.repository.ReportRepository;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Service
@@ -32,38 +31,6 @@ public class ReportingServiceImpl implements ReportingService {
 	private final TaxClient taxClient;
 	private final SubsidyClient subsidyClient;
 	private final ObjectMapper objectMapper;
-	private final ModelMapper modelMapper;
-
-	@Override
-	public ReportResponseDTO generateReport(ReportScope scope) {
-		try {
-			Map<String, Object> reportData = new HashMap<>();
-
-			switch (scope) {
-
-			case TAX -> reportData.put("taxMetrics", taxClient.getTaxStatistics());
-
-			case PROGRAM -> reportData.put("programMetrics", subsidyClient.getProgramSummary());
-
-			case SUBSIDY -> reportData.put("subsidyMetrics", subsidyClient.getSubsidySummary());
-			}
-
-			reportData.put("generatedAt", LocalDateTime.now());
-
-			String jsonData = objectMapper.writeValueAsString(reportData);
-
-			Report report = new Report();
-			report.setScope(scope);
-			report.setGeneratedDate(LocalDateTime.now());
-			report.setMetrics(jsonData);
-
-			return modelMapper.map(reportRepository.save(report), ReportResponseDTO.class);
-
-		} catch (Exception e) {
-			log.error("Failed to generate report for scope: {}", scope, e);
-			throw new RuntimeException("Reporting Service Error: " + e.getMessage());
-		}
-	}
 
 	@Override
 	public AnalyticsDTO getAnalytics() {
@@ -71,7 +38,7 @@ public class ReportingServiceImpl implements ReportingService {
 		AnalyticsDTO dto = new AnalyticsDTO();
 
 		try {
-			Map<String, Object> taxStatistics = taxClient.getTaxStatistics();
+			Map<String, Object> taxStatistics = taxClient.getTaxStatistics(null);
 			if (taxStatistics != null && !taxStatistics.isEmpty()) {
 				dto.setTaxDetails(taxStatistics);
 			}
@@ -81,7 +48,7 @@ public class ReportingServiceImpl implements ReportingService {
 		}
 
 		try {
-			Map<String, Object> programSummary = subsidyClient.getProgramSummary();
+			Map<String, Object> programSummary = subsidyClient.getProgramSummary(null);
 			if (programSummary != null && !programSummary.isEmpty()) {
 				dto.setProgramDetails(programSummary);
 			}
@@ -103,16 +70,6 @@ public class ReportingServiceImpl implements ReportingService {
 	}
 
 	@Override
-	public List<ReportResponseDTO> getReportsByScope(ReportScope scope) {
-
-		log.info("Fetching all historical reports for scope: {}", scope);
-
-		List<Report> reports = reportRepository.findByScope(scope);
-
-		return reports.stream().map(report -> modelMapper.map(report, ReportResponseDTO.class)).toList();
-	}
-
-	@Override
 	public ReportResponseDTO getReportById(Long id) {
 
 		log.info("Fetching detailed report for ID: {}", id);
@@ -120,7 +77,7 @@ public class ReportingServiceImpl implements ReportingService {
 		Report report = reportRepository.findById(id)
 				.orElseThrow(() -> new ReportNotFoundException("Report not found with id: " + id));
 
-		return modelMapper.map(report, ReportResponseDTO.class);
+		return mapToDTO(report);
 	}
 
 	@Override
@@ -131,8 +88,9 @@ public class ReportingServiceImpl implements ReportingService {
 		Map<ReportScope, ReportResponseDTO> summary = new HashMap<>();
 
 		for (ReportScope scope : ReportScope.values()) {
+
 			reportRepository.findTopByScopeOrderByGeneratedDateDesc(scope)
-					.ifPresent(report -> summary.put(scope, modelMapper.map(report, ReportResponseDTO.class)));
+					.ifPresent(report -> summary.put(scope, mapToDTO(report)));
 		}
 
 		return summary;
@@ -145,7 +103,51 @@ public class ReportingServiceImpl implements ReportingService {
 		if (reports.isEmpty()) {
 			throw new ReportNotFoundException("No reports currently exist in the database.");
 		}
-
-		return reports.stream().map(report -> modelMapper.map(report, ReportResponseDTO.class)).toList();
+		return reports.stream().map(this::mapToDTO).toList();
 	}
+
+	@Override
+	public ReportResponseDTO generateReport(ReportScope scope, Long id, Integer year, String reportName) {
+		// 1. Initialize the map to hold nested metric objects
+		Map<String, Object> reportMetrics = new HashMap<>();
+
+		if (scope == ReportScope.OVERALL) {
+			// Populating multiple professional key-object pairs
+			reportMetrics.put("taxAnalytics", taxClient.getTaxStatistics(year));
+			reportMetrics.put("subsidyOverview", subsidyClient.getSubsidySummary());
+			reportMetrics.put("programSpecification", subsidyClient.getProgramSummary(id));
+		} else {
+			// For specific scopes, we still wrap the result in a descriptive key
+			// to maintain the { "key": { "data" } } format requested
+			switch (scope) {
+			case TAX -> reportMetrics.put("taxAnalytics", taxClient.getTaxStatistics(year));
+			case PROGRAM -> reportMetrics.put("programSpecification", subsidyClient.getProgramSummary(id));
+			case SUBSIDY -> reportMetrics.put("subsidyOverview", subsidyClient.getSubsidySummary());
+			default -> throw new IllegalArgumentException("Unsupported report scope: " + scope);
+			}
+		}
+
+		// 2. Persistence Logic
+		Report report = new Report();
+		report.setGeneratedDate(LocalDateTime.now());
+		report.setReportName(reportName);
+		report.setScope(scope);
+
+		// Converts the Map into a JsonNode for your @JdbcTypeCode(SqlTypes.JSON) field
+		report.setMetrics(objectMapper.valueToTree(reportMetrics));
+
+		Report savedReport = reportRepository.save(report);
+
+		// 3. Return the mapped DTO
+		return mapToDTO(savedReport);
+	}
+
+	private ReportResponseDTO mapToDTO(Report report) {
+
+		Object metricsObject = objectMapper.convertValue(report.getMetrics(), Object.class);
+
+		return new ReportResponseDTO(report.getReportId(), report.getScope(), metricsObject, report.getGeneratedDate(),
+				report.getReportName());
+	}
+
 }

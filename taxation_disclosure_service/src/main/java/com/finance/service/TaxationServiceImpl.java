@@ -45,6 +45,7 @@ public class TaxationServiceImpl implements TaxationService {
 	private final UserFeignClient userFeignClient;
 	private final NotificationFeignClient notificationFeignClient;
 	private final ComplianceFeignClient complianceFeignClient;
+	private final DisclosureService disclosureService;
 
 	@Override
 	@Transactional
@@ -227,36 +228,81 @@ public class TaxationServiceImpl implements TaxationService {
 	}
 
 	@Override
-	public Map<String, Object> getTaxStatistics() {
+	public Map<String, Object> getTaxStatistics(Integer year) {
 
 		log.info("Calculating tax statistics...");
 
-		Map<String, Object> statistics = new HashMap<>();
+		Map<String, Object> response = new HashMap<>();
 
-		int totalTaxpayers = Optional.ofNullable(taxRepository.countTotalTaxPayers()).orElse(0);
+		// ---- BASIC COUNTS ----
+		int totalTaxpayers = (year == null) ? Optional.ofNullable(taxRepository.countTotalTaxPayers()).orElse(0)
+				: Optional.ofNullable(taxRepository.countTotalTaxPayers(year)).orElse(0);
 
-		long totalRecords = taxRepository.count();
+		long totalRecords = (year == null) ? taxRepository.count() : taxRepository.countByYear(year);
 
-		long pendingCount = taxRepository.countByStatus(TaxStatus.PENDING);
-		long paidCount = taxRepository.countByStatus(TaxStatus.PAID);
-		long overdueCount = taxRepository.countByStatus(TaxStatus.OVERDUE);
-		long rejectedCount = taxRepository.countByStatus(TaxStatus.REJECTED);
-		long verifiedInitialCount = taxRepository.countByStatus(TaxStatus.VERIFIED_INITIAL);
-		long verifiedFinalCount = taxRepository.countByStatus(TaxStatus.VERIFIED_FINAL);
+		long pendingCount = getCountByStatus(TaxStatus.PENDING, year);
+		long paidCount = getCountByStatus(TaxStatus.PAID, year);
+		long overdueCount = getCountByStatus(TaxStatus.OVERDUE, year);
+		long rejectedCount = getCountByStatus(TaxStatus.REJECTED, year);
 
-		double revenue = Optional.ofNullable(taxRepository.calculateTotalRevenue()).orElse(0.0);
+		double revenueCollected = (year == null)
+				? Optional.ofNullable(taxRepository.calculateTotalRevenue()).orElse(0.0)
+				: Optional.ofNullable(taxRepository.calculateTotalRevenue(year)).orElse(0.0);
 
-		statistics.put("totalTaxpayers", totalTaxpayers);
-		statistics.put("totalRecords", totalRecords);
-		statistics.put("pendingCount", pendingCount);
-		statistics.put("paidCount", paidCount);
-		statistics.put("overdueCount", overdueCount);
-		statistics.put("rejectedCount", rejectedCount);
-		statistics.put("verifiedInitialCount", verifiedInitialCount);
-		statistics.put("verifiedFinalCount", verifiedFinalCount);
-		statistics.put("revenueCollected", revenue);
+		// ---- METRICS ----
+		double complianceRate = totalRecords == 0 ? 0 : (paidCount * 100.0) / totalRecords;
+		double pendingPercentage = totalRecords == 0 ? 0 : (pendingCount * 100.0) / totalRecords;
+		double overduePercentage = totalRecords == 0 ? 0 : (overdueCount * 100.0) / totalRecords;
 
-		return statistics;
+		// ---- REVENUE DETAILS ----
+		double averageTax = totalRecords == 0 ? 0 : revenueCollected / totalRecords;
+
+		Double highestTax = Optional
+				.ofNullable(year == null ? taxRepository.findMaxTax() : taxRepository.findMaxTax(year)).orElse(0.0);
+
+		Double lowestTax = Optional
+				.ofNullable(year == null ? taxRepository.findMinTax() : taxRepository.findMinTax(year)).orElse(0.0);
+
+		// Discloure Data
+		Map<String, Object> discloureSummary = disclosureService.getSummary();
+		// ---- BUILD RESPONSE ----
+
+		Map<String, Object> summary = new HashMap<>();
+		summary.put("totalTaxpayers", totalTaxpayers);
+		summary.put("totalRecords", totalRecords);
+		summary.put("revenueCollected", revenueCollected);
+
+		Map<String, Object> status = new HashMap<>();
+		status.put("pending", pendingCount);
+		status.put("paid", paidCount);
+		status.put("overdue", overdueCount);
+		status.put("rejected", rejectedCount);
+
+		Map<String, Object> metrics = new HashMap<>();
+		metrics.put("complianceRate", round(complianceRate));
+		metrics.put("pendingPercentage", round(pendingPercentage));
+		metrics.put("overduePercentage", round(overduePercentage));
+
+		Map<String, Object> revenue = new HashMap<>();
+		revenue.put("averageTax", round(averageTax));
+		revenue.put("highestTax", highestTax);
+		revenue.put("lowestTax", lowestTax);
+
+		response.put("summary", summary);
+		response.put("status", status);
+		response.put("metrics", metrics);
+		response.put("revenue", revenue);
+		response.put("discloureSummary", discloureSummary);
+
+		return response;
+	}
+
+	private long getCountByStatus(TaxStatus status, Integer year) {
+		return (year == null) ? taxRepository.countByStatus(status) : taxRepository.countByStatusAndYear(status, year);
+	}
+
+	private double round(double value) {
+		return Math.round(value * 10.0) / 10.0;
 	}
 
 	private TaxResponseDTO mapToResponseDTO(TaxRecord record) {

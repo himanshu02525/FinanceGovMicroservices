@@ -1,6 +1,7 @@
 package com.finance.service;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ import com.finance.dto.NotificationRequestDto;
 import com.finance.dto.UserDto;
 import com.finance.enums.NotificationCategory;
 import com.finance.enums.Status;
+import com.finance.exceptions.EntityAlreadyExistsException;
 import com.finance.exceptions.EntityNotFoundException;
 import com.finance.model.CitizenBusiness;
 import com.finance.repository.CitizenBusinessRepository;
@@ -34,11 +36,17 @@ public class CitizenBusinessServiceImpl implements CitizenBusinessService {
     @Autowired
     private NotificationFeignClient notificationFeignClient;
 
-    // Creates a new citizen or business application
     @Override
-    public CitizenBusinessResponseDTO createCitizen(CitizenBusinessRequestDTO request) {
-
+    public CitizenBusinessResponseDTO createCitizen(CitizenBusinessRequestDTO request)
+            throws EntityAlreadyExistsException {
         log.info("Creating Citizen/Business: {}", request.getName());
+
+        Optional<CitizenBusiness> existing = repository.findByUserId(request.getUserId());
+        if (existing.isPresent()) {
+            log.warn("Citizen/Business already exists for userId={}", request.getUserId());
+            throw new EntityAlreadyExistsException(
+                    "A Citizen/Business already exists for this user");
+        }
 
         CitizenBusiness citizen = new CitizenBusiness();
         citizen.setUserId(request.getUserId());
@@ -51,16 +59,14 @@ public class CitizenBusinessServiceImpl implements CitizenBusinessService {
         CitizenBusiness saved = repository.save(citizen);
         log.info("Citizen/Business created with entityId={}", saved.getEntityId());
 
-        // Notify user about application submission
+        // Notify user
         UserDto user = userFeignClient.getUserById(request.getUserId());
-
-        NotificationRequestDto notification =
-                NotificationRequestDto.builder()
-                        .userId(user.getUserId())
-                        .entityId(saved.getEntityId())
-                        .category(NotificationCategory.GENERAL)
-                        .message("A new Citizen/Business has registered and the status is pending")
-                        .build();
+        NotificationRequestDto notification = NotificationRequestDto.builder()
+                .userId(user.getUserId())
+                .entityId(saved.getEntityId())
+                .category(NotificationCategory.GENERAL)
+                .message("A new Citizen/Business has registered and the status is pending")
+                .build();
 
         notificationFeignClient.sendNotification(notification, user.getEmail());
         log.info("Application notification sent to {}", user.getEmail());
@@ -101,7 +107,7 @@ public class CitizenBusinessServiceImpl implements CitizenBusinessService {
         log.info("Entity deleted successfully with ID: {}", id);
     }
 
-    // Updates core entity details
+ // Updates core entity details
     @Override
     public CitizenBusiness updateCitizen(Long id, CitizenBusiness citizen) {
         log.info("Updating entity with ID: {}", id);
@@ -109,6 +115,7 @@ public class CitizenBusinessServiceImpl implements CitizenBusinessService {
         existing.setName(citizen.getName());
         existing.setAddress(citizen.getAddress());
         existing.setContactInfo(citizen.getContactInfo());
+        existing.setType(citizen.getType());
         CitizenBusiness updated = repository.save(existing);
         log.info("Entity updated successfully with ID: {}", id);
         return updated;
@@ -141,5 +148,11 @@ public class CitizenBusinessServiceImpl implements CitizenBusinessService {
         log.info("Approval notification sent to {}", user.getEmail());
 
         return updated;
+    }
+    
+    @Override
+    public Optional<CitizenBusiness> getCitizenByUserId(Long userId) {
+        log.info("Fetching entity by userId: {}", userId);
+        return repository.findByUserId(userId);
     }
 }

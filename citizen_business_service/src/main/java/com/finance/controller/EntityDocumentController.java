@@ -16,13 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.finance.dto.EntityDocumentRequestDTO;
 import com.finance.dto.EntityDocumentResponseDTO;
 import com.finance.enums.DocType;
-import com.finance.model.EntityDocument;
 import com.finance.service.EntityDocumentService;
 
 @RestController
 
 @RequestMapping("/documents")
-
 public class EntityDocumentController {
 
 	@Autowired
@@ -42,10 +40,8 @@ public class EntityDocumentController {
 	}
 	// GET ALL THE DOCUMENTS
 	@GetMapping("/getAllDocument")
-	public List<EntityDocument> getAllDocuments() {
-
-		return service.getAllDocuments();
-
+	public List<EntityDocumentResponseDTO> getAllDocuments() {
+	    return service.getAllDocuments();
 	}
 	// ADMIN WILL VERIFY THE DOCUMENT
 	@PutMapping("/verify/{entityId}/{docType}")
@@ -59,5 +55,7 @@ public class EntityDocumentController {
 		service.rejectDocument(entityId, docType);
 		return ResponseEntity.ok("Document rejected successfully");
 	}
+	
+	
 
 }

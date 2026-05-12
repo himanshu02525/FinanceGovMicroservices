@@ -1,6 +1,7 @@
 package com.finance.service;
 
 import java.util.List;
+import java.util.Optional;
 
 import com.finance.dto.CitizenBusinessRequestDTO;
 import com.finance.dto.CitizenBusinessResponseDTO;
@@ -19,4 +20,5 @@ public interface CitizenBusinessService {
     CitizenBusiness updateCitizen(Long id, CitizenBusiness citizen);
 
     CitizenBusiness approveCitizen(Long id);
+    Optional<CitizenBusiness> getCitizenByUserId(Long userId);
 }

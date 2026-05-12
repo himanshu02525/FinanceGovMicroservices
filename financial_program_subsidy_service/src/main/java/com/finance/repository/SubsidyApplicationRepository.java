@@ -12,14 +12,13 @@ import com.finance.model.SubsidyApplication;
 
 @Repository
 public interface SubsidyApplicationRepository extends JpaRepository<SubsidyApplication, Long> {
-	
-	List<SubsidyApplication> findByStatus(String status);
+    List<SubsidyApplication> findByStatus(String status);
 
-	@Query("SELECT s FROM SubsidyApplication s WHERE s.program.id = :programId")
-	List<SubsidyApplication> findByProgramId(@PathVariable("programId") Long programId);
-	
-	List<SubsidyApplication> findByEntityId(Long entityId);
-	
-	long countByProgramProgramId(Long programId);
-	long countByStatus(ApplicationStatus status);
+    @Query("SELECT s FROM SubsidyApplication s WHERE s.program.id = :programId")
+    List<SubsidyApplication> findByProgramId(@PathVariable("programId") Long programId);
+
+    List<SubsidyApplication> findByEntityId(Long entityId);
+
+    long countByProgramProgramId(Long programId);
+    long countByStatus(ApplicationStatus status);
 }

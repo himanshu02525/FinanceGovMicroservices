@@ -6,6 +6,7 @@ import com.finance.enums.Status;
 import com.finance.enums.Type;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -14,12 +15,16 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "citizen_business")
+@Table(
+    name = "citizen_business",
+    uniqueConstraints = @UniqueConstraint(name = "UK_citizen_business_userid", columnNames = "user_id")
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -29,7 +34,7 @@ public class CitizenBusiness {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long entityId;
     
-   
+    @Column(name = "user_id", nullable = false, unique = true)
     private Long userId;
 
     private String name;

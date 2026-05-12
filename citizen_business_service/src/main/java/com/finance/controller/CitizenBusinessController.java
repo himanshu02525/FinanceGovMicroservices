@@ -1,13 +1,13 @@
 package com.finance.controller;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -49,6 +49,17 @@ public class CitizenBusinessController {
 		service.getCitizenById(entityId);
 		return ResponseEntity.ok(true);
 	}
+	
+	
+	@GetMapping("/getCitizenByUserId/{userId}")
+	public ResponseEntity<CitizenBusiness> getCitizenByUserId(@PathVariable Long userId) {
+	    logger.info("Fetching citizen by userId: {}", userId);
+	    Optional<CitizenBusiness> optionalCitizen = service.getCitizenByUserId(userId);
+	    return optionalCitizen
+	        .map(ResponseEntity::ok)
+	        .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+	}
+	
 
 	
 	

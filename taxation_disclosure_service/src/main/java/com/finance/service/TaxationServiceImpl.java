@@ -46,7 +46,7 @@ public class TaxationServiceImpl implements TaxationService {
 	private final UserFeignClient userFeignClient;
 	private final NotificationFeignClient notificationFeignClient;
 	private final ComplianceFeignClient complianceFeignClient;
-	private final DisclosureService disclosureService;
+	
 
 	@Override
 	@Transactional

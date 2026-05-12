@@ -75,5 +75,13 @@ public class TaxationController {
 		log.info("TaxRecord ID: {} verification completed. New status: {}", taxId, response.getStatus());
 		return ResponseEntity.ok(response);
 	}
+	
+	@PutMapping("/taxrecords/pay/{taxId}")
+	public ResponseEntity<TaxResponseDTO> payTaxRecord(@PathVariable Long taxId) {
+		log.info("REST request to pay TaxRecord ID: {}", taxId);
+		TaxResponseDTO response = taxationService.payTaxRecordByTaxId(taxId);
+		log.info("TaxRecord ID: {} payment completed. New status: {}", taxId, response.getStatus());
+		return ResponseEntity.ok(response);
+	}
 
 }

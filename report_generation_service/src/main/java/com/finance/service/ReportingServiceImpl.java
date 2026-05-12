@@ -108,55 +108,38 @@ public class ReportingServiceImpl implements ReportingService {
 
 	@Override
 	public ReportResponseDTO generateReport(ReportScope scope, Long id, Integer year, String reportName) {
+		// 1. Initialize the map to hold nested metric objects
+		Map<String, Object> reportMetrics = new HashMap<>();
 
-		Map<String, Object> metrics = switch (scope) {
-		case TAX -> taxClient.getTaxStatistics(year);
-		case PROGRAM -> subsidyClient.getProgramSummary(id);
-		case SUBSIDY -> subsidyClient.getSubsidySummary();
-		default -> throw new IllegalArgumentException("Unexpected value: " + scope);
-		};
-
-		Report report = new Report();
-		report.setMetrics(objectMapper.valueToTree(metrics));
-		report.setScope(scope);
-		report.setReportName(reportName);
-
-		Report saved = reportRepository.save(report);
-		return mapToDTO(saved);
-	}
-
-	@Override
-	public AnalyticsDTO generateReportAll(Long programId, Integer taxYear, String reportName) {
-
-		log.info("Generating and saving analytics report for Program ID: {} and Tax Year: {}", programId, taxYear);
-
-		// 1. Fetch data from all clients
-		Map<String, Object> taxAnalytics = taxClient.getTaxStatistics(taxYear);
-		Map<String, Object> subsidyAnalytics = subsidyClient.getSubsidySummary();
-		Map<String, Object> programSpecificAnalytics = subsidyClient.getProgramSummary(programId);
-
-		// 2. Map data to the DTO for the frontend
-		AnalyticsDTO masterAnalyticsResponse = new AnalyticsDTO();
-		masterAnalyticsResponse.setTaxDetails(taxAnalytics);
-		masterAnalyticsResponse.setSubsidyDetails(subsidyAnalytics);
-		masterAnalyticsResponse.setProgramDetails(programSpecificAnalytics);
-
-		// 3. PERSISTENCE: Save the report to the database
-		try {
-			Report reportEntity = new Report();
-			reportEntity.setGeneratedDate(LocalDateTime.now());
-			reportEntity.setReportName(reportName);
-			reportEntity.setMetrics(objectMapper.valueToTree(masterAnalyticsResponse));
-			reportEntity.setScope(ReportScope.OVERALL);
-			reportRepository.save(reportEntity);
-			log.info("Report successfully archived in database.");
-		} catch (Exception e) {
-			log.error("Failed to serialize report for saving: {}", e.getMessage());
-			// We still return the response even if saving fails, or throw an error based on
-			// your needs
+		if (scope == ReportScope.OVERALL) {
+			// Populating multiple professional key-object pairs
+			reportMetrics.put("taxAnalytics", taxClient.getTaxStatistics(year));
+			reportMetrics.put("subsidyOverview", subsidyClient.getSubsidySummary());
+			reportMetrics.put("programSpecification", subsidyClient.getProgramSummary(id));
+		} else {
+			// For specific scopes, we still wrap the result in a descriptive key
+			// to maintain the { "key": { "data" } } format requested
+			switch (scope) {
+			case TAX -> reportMetrics.put("taxAnalytics", taxClient.getTaxStatistics(year));
+			case PROGRAM -> reportMetrics.put("programSpecification", subsidyClient.getProgramSummary(id));
+			case SUBSIDY -> reportMetrics.put("subsidyOverview", subsidyClient.getSubsidySummary());
+			default -> throw new IllegalArgumentException("Unsupported report scope: " + scope);
+			}
 		}
 
-		return masterAnalyticsResponse;
+		// 2. Persistence Logic
+		Report report = new Report();
+		report.setGeneratedDate(LocalDateTime.now());
+		report.setReportName(reportName);
+		report.setScope(scope);
+
+		// Converts the Map into a JsonNode for your @JdbcTypeCode(SqlTypes.JSON) field
+		report.setMetrics(objectMapper.valueToTree(reportMetrics));
+
+		Report savedReport = reportRepository.save(report);
+
+		// 3. Return the mapped DTO
+		return mapToDTO(savedReport);
 	}
 
 	private ReportResponseDTO mapToDTO(Report report) {

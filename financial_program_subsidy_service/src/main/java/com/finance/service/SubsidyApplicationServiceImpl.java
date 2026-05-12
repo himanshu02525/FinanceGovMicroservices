@@ -38,12 +38,12 @@ public class SubsidyApplicationServiceImpl implements SubsidyApplicationService 
 	@Override
 	@Transactional
 	public SubsidyApplicationResponse saveApplication(SubsidyApplicationRequest request) {
-		// Validate citizen externally
-		Boolean isValid = citizenClient.validateCitizen(request.getEntityId());
+// Validate citizen externally
+	Boolean isValid = citizenClient.validateCitizen(request.getEntityId());
 
-		if (!isValid) {
+	if (!isValid) {
 			throw new IllegalStateException("Citizen entity is not valid.");
-		}
+	}
 
 		FinancialProgram program = programRepository.findById(request.getProgramId())
 				.orElseThrow(() -> new IllegalArgumentException("Program not found"));
@@ -117,6 +117,12 @@ public class SubsidyApplicationServiceImpl implements SubsidyApplicationService 
 		}
 		return applications.stream().map(this::toResponse).toList();
 	}
+	
+	 @Override
+	    public List<SubsidyApplicationResponse> getAllApplications() {
+	        List<SubsidyApplication> applications = applicationRepository.findAll();
+	        return applications.stream().map(this::toResponse).toList();
+	    }
 
 	private SubsidyApplicationResponse toResponse(SubsidyApplication app) {
 		return new SubsidyApplicationResponse(app.getApplicationId(), app.getEntityId(), app.getSubmittedDate(),

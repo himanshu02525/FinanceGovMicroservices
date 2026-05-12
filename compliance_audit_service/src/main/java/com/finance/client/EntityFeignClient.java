@@ -11,5 +11,5 @@ import com.finance.dto.CitizenBusinessResponseDTO;
 public interface EntityFeignClient {
 
 	@GetMapping("/entities/getCitizenById/{id}")
-	ResponseEntity<CitizenBusinessResponseDTO> getCitizenById(@PathVariable("id") Long entityId);
+	ResponseEntity<CitizenBusinessResponseDTO> getCitizenById(@PathVariable("id") Long id);
 }

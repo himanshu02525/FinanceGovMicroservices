@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
@@ -18,6 +19,7 @@ import com.finance.dto.SubsidyRequest;
 import com.finance.dto.SubsidyResponse;
 import com.finance.dto.SubsidyUpdateRequest;
 import com.finance.dto.UserDto;
+import com.finance.enums.ApplicationStatus;
 import com.finance.enums.ComplianceRecordType;
 import com.finance.enums.NotificationCategory;
 import com.finance.enums.SubsidyStatus;
@@ -144,12 +146,42 @@ public class SubsidyServiceImpl implements SubsidyService {
 		return subsidyRepository.countByProgramProgramIdAndStatus(programId, SubsidyStatus.GRANTED);
 	}
 
-	@Override
+@Override
 	public Map<String, Object> getSubsidySummary() {
+ 
 		Map<String, Object> summary = new HashMap<>();
-		summary.put("applicationsReceived", applicationRepository.count());
-		summary.put("approvedSubsidies", subsidyRepository.countByStatus(SubsidyStatus.GRANTED));
-		summary.put("amountDistributed", subsidyRepository.sumApprovedAmountAcrossAllPrograms());
+ 
+		long applicationsReceived = applicationRepository.count();
+ 
+		long approvedApplications = applicationRepository.countByStatus(ApplicationStatus.APPROVED);
+		long rejectedApplications = applicationRepository.countByStatus(ApplicationStatus.REJECTED);
+		long pendingApplications = applicationRepository.countByStatus(ApplicationStatus.PENDING);
+ 
+		long grantedCount = subsidyRepository.countByStatus(SubsidyStatus.GRANTED);
+		long cancelledCount = subsidyRepository.countByStatus(SubsidyStatus.CANCELLED);
+		long verifiedCount = subsidyRepository.countByStatus(SubsidyStatus.VERIFIED);
+		long onHoldCount = subsidyRepository.countByStatus(SubsidyStatus.ONHOLD);
+ 
+		long approvedSubsidies = grantedCount;
+		long rejectedSubsidies = rejectedApplications;
+ 
+		double amountDistributed = Optional.ofNullable(subsidyRepository.sumApprovedAmountAcrossAllPrograms())
+				.map(BigDecimal::doubleValue).orElse(0.0);
+ 
+		summary.put("applicationsReceived", applicationsReceived);
+		summary.put("approvedSubsidies", approvedSubsidies);
+		summary.put("rejectedSubsidies", rejectedSubsidies);
+		summary.put("amountDistributed", amountDistributed);
+ 
+		summary.put("pendingApplications", pendingApplications);
+		summary.put("approvedApplications", approvedApplications);
+		summary.put("rejectedApplications", rejectedApplications);
+ 
+		summary.put("grantedCount", grantedCount);
+		summary.put("cancelledCount", cancelledCount);
+		summary.put("verifiedCount", verifiedCount);
+		summary.put("onHoldCount", onHoldCount);
+ 
 		return summary;
 	}
 

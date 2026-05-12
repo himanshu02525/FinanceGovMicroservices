@@ -3,19 +3,20 @@ package com.finance.service;
 import java.util.List;
 import java.util.Map;
 
+import com.finance.dto.AnalyticsDTO;
+import com.finance.dto.ReportResponseDTO;
 import com.finance.enums.ReportScope;
-import com.finance.model.Report;
-import com.finance.dto.ReportAnalyticsDTO;
 
 public interface ReportingService {
 
-    Report generateReport(ReportScope scope);
+	ReportResponseDTO getReportById(Long id);
 
-    List<Report> getReportsByScope(ReportScope scope);
+	Map<ReportScope, ReportResponseDTO> getSummaryReports();
 
-    Report getReportById(Long id);
+	AnalyticsDTO getAnalytics();
 
-    Map<ReportScope, Report> getSummaryReports();
+	List<ReportResponseDTO> getAll();
 
-    ReportAnalyticsDTO getAnalytics();
+	ReportResponseDTO generateReport(ReportScope scope, Long id, Integer year, String reportName);
+
 }

@@ -50,8 +50,7 @@ public class GlobalExceptionHandler {
 	}
 
 	/*
-	 * ================= FEIGN CLIENT EXCEPTIONS (For Raw Feign Errors)
-	 * =================
+	 * ================= FEIGN CLIENT EXCEPTIONS =================
 	 */
 
 	@ExceptionHandler(FeignException.class)
@@ -64,7 +63,7 @@ public class GlobalExceptionHandler {
 		if (responseBody != null && !responseBody.isEmpty()) {
 			try {
 				JsonNode node = new ObjectMapper().readTree(responseBody);
-				friendlyMessage = node.has("message") ? node.get("message").asText() : responseBody;
+				friendlyMessage = node.has(MESSAGE) ? node.get(MESSAGE).asString() : responseBody;
 			} catch (Exception e) {
 				friendlyMessage = responseBody;
 			}
@@ -76,11 +75,12 @@ public class GlobalExceptionHandler {
 
 	/* ================= GENERIC FALLBACK (500) ================= */
 
-//	@ExceptionHandler(Exception.class)
-//	public ResponseEntity<Object> handleGlobalException(Exception ex, WebRequest request) {
-//		log.error("Internal Server Error: ", ex);
-//		return buildResponse("An unexpected error occurred. Please try again later.", HttpStatus.INTERNAL_SERVER_ERROR);
-//	}
+	@ExceptionHandler(Exception.class)
+	public ResponseEntity<Object> handleGlobalException(Exception ex, WebRequest request) {
+		log.error("Internal Server Error: ", ex);
+		return buildResponse("An unexpected error occurred. Please try again later." + ex.getLocalizedMessage(),
+				HttpStatus.INTERNAL_SERVER_ERROR);
+	}
 
 	/* ================= UTILITY METHOD ================= */
 

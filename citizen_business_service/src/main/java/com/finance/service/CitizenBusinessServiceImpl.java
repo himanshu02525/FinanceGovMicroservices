@@ -101,7 +101,7 @@ public class CitizenBusinessServiceImpl implements CitizenBusinessService {
         log.info("Entity deleted successfully with ID: {}", id);
     }
 
-    // Updates core entity details
+ // Updates core entity details
     @Override
     public CitizenBusiness updateCitizen(Long id, CitizenBusiness citizen) {
         log.info("Updating entity with ID: {}", id);
@@ -109,6 +109,7 @@ public class CitizenBusinessServiceImpl implements CitizenBusinessService {
         existing.setName(citizen.getName());
         existing.setAddress(citizen.getAddress());
         existing.setContactInfo(citizen.getContactInfo());
+        existing.setType(citizen.getType());
         CitizenBusiness updated = repository.save(existing);
         log.info("Entity updated successfully with ID: {}", id);
         return updated;

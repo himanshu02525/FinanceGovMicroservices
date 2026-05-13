@@ -106,41 +106,27 @@ public class ReportingServiceImpl implements ReportingService {
 		return reports.stream().map(this::mapToDTO).toList();
 	}
 
-	@Override
-	public ReportResponseDTO generateReport(ReportScope scope, Long id, Integer year, String reportName) {
-		// 1. Initialize the map to hold nested metric objects
-		Map<String, Object> reportMetrics = new HashMap<>();
+@Override
+public ReportResponseDTO generateReport(ReportScope scope, Long id, Integer year, String reportName) {
+    Map<String, Object> reportMetrics = new HashMap<>();
 
-		if (scope == ReportScope.OVERALL) {
-			// Populating multiple professional key-object pairs
-			reportMetrics.put("taxAnalytics", taxClient.getTaxStatistics(year));
-			reportMetrics.put("subsidyOverview", subsidyClient.getSubsidySummary());
-			reportMetrics.put("programSpecification", subsidyClient.getProgramSummary(id));
-		} else {
-			// For specific scopes, we still wrap the result in a descriptive key
-			// to maintain the { "key": { "data" } } format requested
-			switch (scope) {
-			case TAX -> reportMetrics.put("taxAnalytics", taxClient.getTaxStatistics(year));
-			case PROGRAM -> reportMetrics.put("programSpecification", subsidyClient.getProgramSummary(id));
-			case SUBSIDY -> reportMetrics.put("subsidyOverview", subsidyClient.getSubsidySummary());
-			default -> throw new IllegalArgumentException("Unsupported report scope: " + scope);
-			}
-		}
+      switch (scope) {
+            case TAX -> reportMetrics.put("taxAnalytics", taxClient.getTaxStatistics(year));
+            case PROGRAM -> reportMetrics.put("programSpecification", subsidyClient.getProgramSummary(id));
+            case SUBSIDY -> reportMetrics.put("subsidyOverview", subsidyClient.getSubsidySummary());
+            default -> throw new IllegalArgumentException("Unsupported report scope: " + scope);
+        }
 
-		// 2. Persistence Logic
-		Report report = new Report();
-		report.setGeneratedDate(LocalDateTime.now());
-		report.setReportName(reportName);
-		report.setScope(scope);
+    Report report = new Report();
+    report.setGeneratedDate(LocalDateTime.now());
+    report.setReportName(reportName);
+    report.setScope(scope);
+    report.setMetrics(objectMapper.valueToTree(reportMetrics));
 
-		// Converts the Map into a JsonNode for your @JdbcTypeCode(SqlTypes.JSON) field
-		report.setMetrics(objectMapper.valueToTree(reportMetrics));
+    Report savedReport = reportRepository.save(report);
 
-		Report savedReport = reportRepository.save(report);
-
-		// 3. Return the mapped DTO
-		return mapToDTO(savedReport);
-	}
+    return mapToDTO(savedReport);
+}
 
 	private ReportResponseDTO mapToDTO(Report report) {
 

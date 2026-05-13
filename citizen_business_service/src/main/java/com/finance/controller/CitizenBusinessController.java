@@ -1,6 +1,7 @@
 package com.finance.controller;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +23,7 @@ import com.finance.model.CitizenBusiness;
 import com.finance.service.CitizenBusinessService;
 
 import jakarta.validation.Valid;
+
 
 @RestController
 @RequestMapping("/entities")
@@ -47,6 +49,17 @@ public class CitizenBusinessController {
 		service.getCitizenById(entityId);
 		return ResponseEntity.ok(true);
 	}
+	
+	
+	@GetMapping("/getCitizenByUserId/{userId}")
+	public ResponseEntity<CitizenBusiness> getCitizenByUserId(@PathVariable Long userId) {
+	    logger.info("Fetching citizen by userId: {}", userId);
+	    Optional<CitizenBusiness> optionalCitizen = service.getCitizenByUserId(userId);
+	    return optionalCitizen
+	        .map(ResponseEntity::ok)
+	        .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+	}
+	
 
 	
 	

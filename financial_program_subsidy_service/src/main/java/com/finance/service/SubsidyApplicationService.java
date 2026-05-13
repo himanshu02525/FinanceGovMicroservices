@@ -4,7 +4,6 @@ import java.util.List;
 
 import com.finance.dto.SubsidyApplicationRequest;
 import com.finance.dto.SubsidyApplicationResponse;
-import com.finance.model.SubsidyApplication;
 
 public interface SubsidyApplicationService {
     SubsidyApplicationResponse saveApplication(SubsidyApplicationRequest request);

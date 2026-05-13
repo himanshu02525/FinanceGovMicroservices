@@ -27,6 +27,7 @@ import lombok.extern.slf4j.Slf4j; // Step 1: Import Slf4j
 @Slf4j
 @RequiredArgsConstructor
 @RestController
+
 @CrossOrigin("*")
 @RequestMapping("/audit")
 public class AuditController {

@@ -51,6 +51,7 @@ public class CitizenBusinessController {
 	}
 	
 	
+	//NEW API 
 	@GetMapping("/getCitizenByUserId/{userId}")
 	public ResponseEntity<CitizenBusiness> getCitizenByUserId(@PathVariable Long userId) {
 	    logger.info("Fetching citizen by userId: {}", userId);

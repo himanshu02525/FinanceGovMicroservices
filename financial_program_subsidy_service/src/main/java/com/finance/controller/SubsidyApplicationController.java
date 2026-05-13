@@ -10,7 +10,7 @@ import com.finance.service.SubsidyApplicationService;
 
 @RestController
 @RequestMapping("/applications")
-@CrossOrigin(origins = "http://localhost:5173")
+
 public class SubsidyApplicationController {
 
     private final SubsidyApplicationService service;

@@ -25,7 +25,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/subsidies")
 @RequiredArgsConstructor
 
-@CrossOrigin(origins = "http://localhost:5173")
+
 public class SubsidyController {
 
 	private final SubsidyService service;

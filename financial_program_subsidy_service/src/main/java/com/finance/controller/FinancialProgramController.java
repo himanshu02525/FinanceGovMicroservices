@@ -27,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/programs")
 @Slf4j
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:5173")
+
 
 public class FinancialProgramController {
 

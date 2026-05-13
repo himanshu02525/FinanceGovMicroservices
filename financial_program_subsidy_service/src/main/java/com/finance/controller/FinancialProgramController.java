@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,6 +27,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/programs")
 @Slf4j
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:5173")
+
 public class FinancialProgramController {
 
 	private final FinancialProgramService service;

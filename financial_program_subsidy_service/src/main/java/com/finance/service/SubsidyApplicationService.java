@@ -13,6 +13,7 @@ public interface SubsidyApplicationService {
     SubsidyApplicationResponse approveApplication(Long applicationId);
     SubsidyApplicationResponse rejectApplication(Long applicationId);
     long getApplicationsReceived(Long programId);
+    public List<SubsidyApplicationResponse> getAllApplications();
 }
 
 

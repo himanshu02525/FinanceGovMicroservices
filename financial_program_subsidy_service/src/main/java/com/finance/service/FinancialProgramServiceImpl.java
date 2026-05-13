@@ -166,99 +166,99 @@ public class FinancialProgramServiceImpl implements FinancialProgramService {
 		return repository.countByStatus(ProgramStatus.ACTIVE);
 	}
 
-	@Override
+@Override
 	public Map<String, Object> getProgramSummary() {
-
+ 
 		Map<String, Object> summary = new HashMap<>();
-
+ 
 		long totalPrograms = repository.count();
 		long activePrograms = repository.countByStatus(ProgramStatus.ACTIVE);
 		long closedPrograms = repository.countByStatus(ProgramStatus.CLOSED);
-
+ 
 		double totalBudget = Optional.ofNullable(repository.sumTotalBudgetAcrossAllPrograms())
 				.map(BigDecimal::doubleValue).orElse(0.0);
-
+ 
 		summary.put("totalPrograms", totalPrograms);
 		summary.put("activePrograms", activePrograms);
 		summary.put("closedPrograms", closedPrograms);
 		summary.put("totalBudget", totalBudget);
-
+ 
 		return summary;
 	}
-
+ 
 	@Override
 	public Map<String, Object> getProgramSummary(Long programId) {
-
+ 
 		FinancialProgramResponse programDetails = getProgramById(programId);
-
+ 
 		BigDecimal budget = BigDecimal.valueOf(programDetails.getBudget());
-
+ 
 		BigDecimal approvedAmount = Optional.ofNullable(subsidyRepository.sumApprovedAmountByProgramId(programId))
 				.orElse(BigDecimal.ZERO);
-
+ 
 		BigDecimal remainingAmount = budget.subtract(approvedAmount);
-
+ 
 		Map<String, Object> response = new HashMap<>();
-
+ 
 		// ✅ Subsidy Status Counts
 		Map<String, Long> subsidyStatusCounts = new HashMap<>();
 		for (SubsidyStatus status : SubsidyStatus.values()) {
 			long count = subsidyRepository.countByProgramProgramIdAndStatus(programId, status);
-
+ 
 			subsidyStatusCounts.put(status.name(), count);
 		}
-
+ 
 		// ✅ Application Status Counts
 		Map<String, Long> applicationStatusCounts = new HashMap<>();
 		long totalApplications = 0;
-
+ 
 		for (ApplicationStatus status : ApplicationStatus.values()) {
 			long count = subsidyApplicationRepository.countByProgramAndStatus(programId, status);
-
+ 
 			applicationStatusCounts.put(status.name(), count);
 			totalApplications += count;
 		}
-
+ 
 		// ✅ Approved Applications
 		long approvedApplications = applicationStatusCounts.getOrDefault(ApplicationStatus.APPROVED.name(), 0L);
-
+ 
 		// ✅ Budget Utilization %
 		BigDecimal utilizationPercent = budget.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ZERO
 				: approvedAmount.divide(budget, 2, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
-
+ 
 		// ✅ Remaining Budget %
 		BigDecimal remainingPercent = budget.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ZERO
 				: remainingAmount.divide(budget, 2, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
-
+ 
 		// ✅ Approval Rate %
 		BigDecimal approvalRate = totalApplications == 0 ? BigDecimal.ZERO
 				: BigDecimal.valueOf(approvedApplications)
 						.divide(BigDecimal.valueOf(totalApplications), 2, RoundingMode.HALF_UP)
 						.multiply(BigDecimal.valueOf(100));
-
+ 
 		// ✅ Average Subsidy Amount
 		BigDecimal avgSubsidyAmount = approvedApplications == 0 ? BigDecimal.ZERO
 				: approvedAmount.divide(BigDecimal.valueOf(approvedApplications), 2, RoundingMode.HALF_UP);
-
+ 
 		// ✅ Final Response
 		response.put("programDetails", programDetails);
-
+ 
 		response.put("budget", budget);
 		response.put("approvedAmount", approvedAmount);
 		response.put("remainingAmount", remainingAmount);
-
+ 
 		response.put("budgetUtilizationPercent", utilizationPercent);
 		response.put("remainingBudgetPercent", remainingPercent);
-
+ 
 		response.put("totalApplications", totalApplications);
 		response.put("approvedApplications", approvedApplications);
 		response.put("approvalRate", approvalRate);
-
+ 
 		response.put("averageSubsidyAmount", avgSubsidyAmount);
-
+ 
 		response.put("subsidyStatusDistribution", subsidyStatusCounts);
 		response.put("applicationStatusDistribution", applicationStatusCounts);
-
+ 
 		return response;
 	}
 

@@ -348,6 +348,7 @@ public class SecurityConfig {
                       "/subsidies/**",
                       "/api/taxation/taxrecords/verify/{taxId}",
                       "/api/disclosure/{disclosureId}/validate"
+                      
               ).hasAuthority("ROLE_FINANCIAL_OFFICER")
 
               /* =====================================================

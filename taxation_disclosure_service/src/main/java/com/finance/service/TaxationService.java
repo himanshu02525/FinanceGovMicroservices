@@ -8,8 +8,16 @@ import com.finance.dto.TaxResponseDTO;
 import com.finance.dto.TaxUpdateDTO;
 
 public interface TaxationService {
-	// Create record and notify of pending status
-	TaxResponseDTO createTaxRecord(TaxRequestDTO request);
+
+    // Create record and notify of pending status
+    TaxResponseDTO createTaxRecord(TaxRequestDTO request); 
+    
+
+    
+    TaxResponseDTO payTaxRecordByTaxId(Long taxId);
+    
+
+
 
 	// Admin: List all tax records
 	List<TaxResponseDTO> getAllTaxRecords();

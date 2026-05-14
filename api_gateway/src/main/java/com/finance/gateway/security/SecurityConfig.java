@@ -230,7 +230,12 @@ public class SecurityConfig {
                     "/actuator/info",
                     "/api/auth/**",
                     "/swagger-ui/**",
-                    "/api/v3/**"
+                    "/api/v3/**",
+                    "/entities/getAllEntity",
+                    "/documents/getAllDocument",
+                    "/documents/verify/{entityId}/{docType}",
+                    "/documents/reject",
+                    "/entities/approveCitizen"
                 ).permitAll()
                 
                 // ... (rest of your existing matchers)
@@ -357,15 +362,16 @@ public class SecurityConfig {
              
               
               .pathMatchers(
-                      "/entities/getAllEntity",
                       "/entities/getCitizenById",
                       "/entities/deleteById",
-                      "/entities/approveCitizen",
+                      
                       "/documents/getAllDocument",
-                      "/documents/verify",
                       "/documents/reject"
+                      
               ).hasAuthority("ROLE_ADMIN")
 
+              
+              
               .pathMatchers(
                       "/api/admin/**",
                       "/api/notifications/**"

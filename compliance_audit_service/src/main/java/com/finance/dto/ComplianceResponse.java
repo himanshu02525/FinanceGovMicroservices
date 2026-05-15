@@ -30,4 +30,5 @@ public class ComplianceResponse {
 	private TaxResponseDTO taxResponseDTO;
 	private SubsidyResponse subsidyResponse;
 	private FinancialProgramResponse financialProgramResponse;
+	private CitizenBusiness citizenBusinessResponseDTO;
 }

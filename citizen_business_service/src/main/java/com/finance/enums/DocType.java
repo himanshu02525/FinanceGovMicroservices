@@ -1,5 +1,5 @@
 package com.finance.enums;
  
 public enum DocType {
-    PAN, AADHAR, PASSPORT, ID_PROOF , FINANCIAL_STATEMENT
+    PAN, AADHAR, PASSPORT, OTHERS , FINANCIAL_STATEMENT
 }

@@ -152,7 +152,7 @@ public class FinancialProgramServiceImpl implements FinancialProgramService {
 	}
 
 	private FinancialProgramResponse toResponse(FinancialProgram program) {
-		return new FinancialProgramResponse(program.getProgramId(), program.getTitle(), program.getDescription(),
+		return new FinancialProgramResponse(program.getProgramId(), program.getTitle(), program.getDescription(),program.getStartDate(),program.getEndDate(),
 				program.getBudget(), program.getStatus().name());
 	}
 

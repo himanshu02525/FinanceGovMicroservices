@@ -80,7 +80,7 @@ public class ResourceServiceImpl implements ResourceService {
 	@Override
 	public List<ResourceResponseDTO> getAllocatedResources() {
 
-		List<Resource> resources = resourceRepository.findByStatus(ResourceStatus.UTILIZED);
+		List<Resource> resources = resourceRepository.findAll();
 
 		if (resources.isEmpty()) {
 			throw new IllegalStateException("No allocated resources exist");

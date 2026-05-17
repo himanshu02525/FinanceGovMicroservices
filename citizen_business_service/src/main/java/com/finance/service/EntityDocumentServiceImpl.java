@@ -24,6 +24,8 @@ import com.finance.model.CitizenBusiness;
 import com.finance.model.EntityDocument;
 import com.finance.repository.CitizenBusinessRepository;
 import com.finance.repository.EntityDocumentRepository;
+import org.springframework.web.multipart.MultipartFile;
+import java.util.UUID;
 
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -45,25 +47,32 @@ public class EntityDocumentServiceImpl implements EntityDocumentService {
     @Autowired
     private NotificationFeignClient notificationFeignClient;
 
-    // Handles document upload for an entity
+    // Handles document upload for an entity (multipart)
     @Override
-    public EntityDocumentResponseDTO uploadDocument(Long entityId, EntityDocumentRequestDTO request) {
+    public EntityDocumentResponseDTO uploadDocument(Long entityId, DocType docType, MultipartFile file, String uploadedDate) throws IOException {
 
         CitizenBusiness entity = citizenRepository.findById(entityId)
                 .orElseThrow(() -> new EntityNotFoundException("Entity not found"));
 
         // ✅ Validate based on entity type
-        validateDocumentForEntityType(entity, request.getDocType());
+        validateDocumentForEntityType(entity, docType);
+
+        // Ensure uploads directory exists and save file
+        String originalFilename = file.getOriginalFilename();
+        String extension = originalFilename != null && originalFilename.contains(".") ? originalFilename.substring(originalFilename.lastIndexOf('.')) : ".pdf";
+        String uniqueName = entityId + "-" + docType.name() + "-" + UUID.randomUUID().toString() + extension;
+
+        saveFileToDisk(uniqueName, file.getBytes());
 
         EntityDocument doc = new EntityDocument();
         doc.setCitizenBusiness(entity);
-        doc.setDocType(request.getDocType());
-        doc.setFileURI(request.getFileURI());
-        doc.setUploadedDate(request.getUploadedDate());
+        doc.setDocType(docType);
+        doc.setFileURI(uniqueName);
+        doc.setUploadedDate(uploadedDate);
         doc.setVerificationStatus(VerificationStatus.PENDING);
 
         EntityDocument saved = repository.save(doc);
-        log.info("Document uploaded for entityId={}, docType={}", entityId, request.getDocType());
+        log.info("Document uploaded for entityId={}, docType={}", entityId, docType);
 
         notifyCitizen(entity, "Your document has been uploaded and is pending verification");
 
@@ -137,12 +146,9 @@ public class EntityDocumentServiceImpl implements EntityDocumentService {
                 .collect(java.util.stream.Collectors.toList());
     }
 
-    // Update document (re-upload)
+    // Update document (re-upload) using multipart file
     @Override
-    public EntityDocumentResponseDTO updateDocument(
-            Long entityId,
-            DocType docType,
-            EntityDocumentRequestDTO request) {
+    public EntityDocumentResponseDTO updateDocument(Long entityId, DocType docType, MultipartFile file, String uploadedDate) throws IOException {
 
         CitizenBusiness entity = citizenRepository.findById(entityId)
                 .orElseThrow(() -> new EntityNotFoundException("Entity not found"));
@@ -150,8 +156,15 @@ public class EntityDocumentServiceImpl implements EntityDocumentService {
         EntityDocument doc = repository.findByCitizenBusinessAndDocType(entity, docType)
                 .orElseThrow(() -> new EntityNotFoundException("Document not found"));
 
-        doc.setFileURI(request.getFileURI());
-        doc.setUploadedDate(request.getUploadedDate());
+        // Save new file to disk
+        String originalFilename = file.getOriginalFilename();
+        String extension = originalFilename != null && originalFilename.contains(".") ? originalFilename.substring(originalFilename.lastIndexOf('.')) : ".pdf";
+        String uniqueName = entityId + "-" + docType.name() + "-" + UUID.randomUUID().toString() + extension;
+
+        saveFileToDisk(uniqueName, file.getBytes());
+
+        doc.setFileURI(uniqueName);
+        doc.setUploadedDate(uploadedDate);
         doc.setVerificationStatus(VerificationStatus.PENDING);
 
         EntityDocument updated = repository.save(doc);
@@ -164,6 +177,33 @@ public class EntityDocumentServiceImpl implements EntityDocumentService {
                 updated.getUploadedDate(),
                 updated.getVerificationStatus()
         );
+    }
+
+    // Download raw file bytes for preview
+    @Override
+    public byte[] downloadDocument(Long entityId, DocType docType) {
+        CitizenBusiness entity = citizenRepository.findById(entityId)
+                .orElseThrow(() -> new EntityNotFoundException("Entity not found"));
+
+        EntityDocument doc = repository.findByCitizenBusinessAndDocType(entity, docType)
+                .orElseThrow(() -> new EntityNotFoundException("Document not found"));
+
+        Path filePath = Paths.get("C:", "uploads", "documents", doc.getFileURI());
+        try {
+            return Files.readAllBytes(filePath);
+        } catch (IOException e) {
+            log.error("Error reading file {}", filePath, e);
+            throw new RuntimeException("File not found: " + doc.getFileURI(), e);
+        }
+    }
+
+    // Helper to save bytes to disk
+    private void saveFileToDisk(String fileName, byte[] fileContent) throws IOException {
+        Path uploadsDir = Paths.get("C:", "uploads", "documents");
+        Files.createDirectories(uploadsDir);
+        Path filePath = uploadsDir.resolve(fileName);
+        Files.write(filePath, fileContent);
+        log.info("Saved file to {}", filePath.toAbsolutePath());
     }
 
     private void validateDocumentForEntityType(CitizenBusiness entity, DocType docType) {

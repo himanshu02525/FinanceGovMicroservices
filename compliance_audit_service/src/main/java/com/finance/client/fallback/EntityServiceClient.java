@@ -4,7 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.finance.client.EntityFeignClient;
-import com.finance.dto.CitizenBusinessResponseDTO;
+import com.finance.dto.CitizenBusiness;
 import com.finance.exceptions.EntityNotFoundException;
 import com.finance.exceptions.ServiceUnavailableException;
 import com.finance.util.MessageUtil;
@@ -22,7 +22,7 @@ public class EntityServiceClient {
 	private final MessageUtil messageUtil;
 
 	@CircuitBreaker(name = "entityService", fallbackMethod = "validateEntityFallback")
-	public ResponseEntity<CitizenBusinessResponseDTO> getCitizenById(Long entityId) {
+	public ResponseEntity<CitizenBusiness> getCitizenById(Long entityId) {
 		try {
 			return entityFeignClient.getCitizenById(entityId);
 		} catch (feign.FeignException.NotFound ex) {
@@ -31,7 +31,7 @@ public class EntityServiceClient {
 	}
 
 	@SuppressWarnings("unused")
-	private ResponseEntity<CitizenBusinessResponseDTO> getCitizenById(Long entityId, Throwable ex) {
+	private ResponseEntity<CitizenBusiness> getCitizenById(Long entityId, Throwable ex) {
 		log.error("Entity service error for entityId={}. Reason: {}", entityId, ex.getMessage());
 		if (ex instanceof EntityNotFoundException entityNotFoundException) {
 			throw entityNotFoundException;

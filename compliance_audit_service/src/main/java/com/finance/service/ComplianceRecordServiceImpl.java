@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import com.finance.client.EntityFeignClient;
 import com.finance.client.fallback.ProgramSubsidyServiceClient;
 import com.finance.client.fallback.TaxServiceClient;
-import com.finance.dto.CitizenBusinessResponseDTO;
+import com.finance.dto.CitizenBusiness;
 import com.finance.dto.ComplianceCreateRequest;
 import com.finance.dto.ComplianceResponse;
 import com.finance.dto.ComplianceUpdateRequest;
@@ -78,41 +78,35 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 	private void fetchExternalDetails(ComplianceResponse response) {
 		Long lookupId = response.getReferenceId();
 		ComplianceRecordType type = response.getType();
+		fetchExternalDetails(response, lookupId, type);
+	}
 
+	private void fetchExternalDetails(ComplianceResponse response, Long lookupId, ComplianceRecordType type) {
 		if (type == null || lookupId == null) {
-			log.warn(" Skipping external fetch: Type or Reference ID is missing for Response ID: {}",
-					response.getComplianceId());
+			log.warn("Skipping external fetch: Type or Reference ID is missing.");
 			return;
 		}
 
-		log.info(" Initiating external fetch for Type: {} and ID: {}", type, lookupId);
+		log.info("Initiating secondary external fetch for Type: {} and ID: {}", type, lookupId);
 
 		try {
 			switch (type) {
 			case TAX -> {
-				log.debug("[TaxClient] Requesting tax details for ID: {}", lookupId);
 				TaxResponseDTO tax = taxServiceClient.getTaxById(lookupId).getBody();
 				response.setTaxResponseDTO(tax);
-				if (tax != null) {
-					log.info("[TaxClient] Successfully retrieved tax data: {}", tax);
-				}
 			}
 			case SUBSIDY -> {
-				log.debug("[SubsidyClient] Requesting subsidy details for ID: {}", lookupId);
 				SubsidyResponse subsidy = programSubsidyFeignClient.getSubsidyById(lookupId).getBody();
 				response.setSubsidyResponse(subsidy);
-				log.info("[SubsidyClient] Successfully retrieved subsidy data");
 			}
 			case PROGRAM -> {
-				log.debug("[ProgramClient] Requesting program details for ID: {}", lookupId);
 				FinancialProgramResponse program = programSubsidyFeignClient.getProgramById(lookupId).getBody();
 				response.setFinancialProgramResponse(program);
-				log.info("[ProgramClient] Successfully retrieved program data");
+				log.info("[ProgramClient] Successfully retrieved secondary program data");
 			}
 			}
 		} catch (Exception ex) {
-			log.error(" CRITICAL ERROR: Failed to fetch external details for type {} and ID {}. Reason: {}", type,
-					lookupId, ex.getMessage(), ex);
+			log.error("Failed to fetch secondary details for type {} and ID {}: {}", type, lookupId, ex.getMessage());
 		}
 	}
 
@@ -144,10 +138,21 @@ public class ComplianceRecordServiceImpl implements ComplianceRecordService {
 
 		log.info(" Found record. Fetching associated Citizen/Business details for Entity ID: {}",
 				complianceRecord.getEntityId());
-		ResponseEntity<CitizenBusinessResponseDTO> entityDetails = entityFeignClient
+
+		ResponseEntity<CitizenBusiness> entityDetails = entityFeignClient
 				.getCitizenById(complianceRecord.getEntityId());
 
+		// 1. Fetch primary details based on the record's main type
 		fetchExternalDetails(response);
+
+		// 2. Fetch secondary details if it's a Subsidy (to get Program info)
+		if (complianceRecord.getType() == ComplianceRecordType.SUBSIDY) {
+			// We pass 'response' here so the method can call
+			// response.setFinancialProgramResponse()
+			fetchExternalDetails(response, response.getReferenceId(), ComplianceRecordType.PROGRAM);
+		}
+
+		response.setCitizenBusinessResponseDTO(entityDetails.getBody());
 		return response;
 	}
 

@@ -27,37 +27,37 @@ public class SubsidyApplicationController {
         return ResponseEntity.ok(response);
     }
 
-    // Fetch applications by entity
+    
     @GetMapping("/fetchByEntity/{entityId}")
     public ResponseEntity<List<SubsidyApplicationResponse>> getApplicationsByEntity(@PathVariable Long entityId) {
         return ResponseEntity.ok(service.getApplicationsByEntity(entityId));
     }
 
-    // Financial officer approves application
+    
     @PutMapping("/approve/{id}")
     public ResponseEntity<SubsidyApplicationResponse> approveApplication(@PathVariable Long id) {
         return ResponseEntity.ok(service.approveApplication(id));
     }
 
-    // Financial officer rejects application
+    
     @PutMapping("/reject/{id}")
     public ResponseEntity<SubsidyApplicationResponse> rejectApplication(@PathVariable Long id) {
         return ResponseEntity.ok(service.rejectApplication(id));
     }
 
-    // Reporting: applications received for a program
+    
     @GetMapping("/applicationsReceived/{programId}")
     public ResponseEntity<Long> getApplicationsReceived(@PathVariable Long programId) {
         return ResponseEntity.ok(service.getApplicationsReceived(programId));
     }
 
-    // Fetch applications by program
+    
     @GetMapping("/fetchByProgram/{programId}")
     public ResponseEntity<List<SubsidyApplicationResponse>> fetchByProgram(@PathVariable Long programId) {
         return ResponseEntity.ok(service.fetchByProgram(programId));
     }
 
-    // ✅ NEW: Fetch all applications (for Financial Officer)
+    
     @GetMapping("/fetchAll")
     public ResponseEntity<List<SubsidyApplicationResponse>> fetchAllApplications() {
         return ResponseEntity.ok(service.getAllApplications());

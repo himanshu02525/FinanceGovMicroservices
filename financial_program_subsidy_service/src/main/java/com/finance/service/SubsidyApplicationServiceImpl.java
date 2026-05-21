@@ -38,7 +38,7 @@ public class SubsidyApplicationServiceImpl implements SubsidyApplicationService 
 	@Override
 	@Transactional
 	public SubsidyApplicationResponse saveApplication(SubsidyApplicationRequest request) {
-// Validate citizen externally
+
 	Boolean isValid = citizenClient.validateCitizen(request.getEntityId());
 
 	if (!isValid) {
@@ -58,17 +58,17 @@ public class SubsidyApplicationServiceImpl implements SubsidyApplicationService 
 		app.setProgram(program);
 		app.setEntityId(request.getEntityId());
 
-		// After saving the application
+		
 		SubsidyApplication saved = applicationRepository.save(app);
 
-		// ✅ Fetch user details
+		
 		UserDto user = userFeignClient.getUserById(request.getUserId());
 		log.info("User Info" + user.getUserId());
-//        String email = "hmcreationhimanshu011@gmail.com";
+
 		String email = user.getEmail();
 		Long id = user.getUserId();
 
-		// ✅ Trigger notification
+		
 		NotificationRequestDto notification = NotificationRequestDto.builder().userId(id).entityId(saved.getEntityId())
 				.category(NotificationCategory.SUBSIDY)
 				.message("Your subsidy application has been submitted successfully.").build();

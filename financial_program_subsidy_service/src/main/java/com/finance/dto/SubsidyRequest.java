@@ -10,16 +10,16 @@ import lombok.*;
 public class SubsidyRequest {
 
     @NotNull(message = "Entity ID is required")
-    private Long entityId;   // Citizen/Business applying
+    private Long entityId;   
 
     @NotNull(message = "Program ID is required")
-    private Long programId;  // Financial program ID
+    private Long programId;  
 
     @NotNull(message = "Amount is required")
     @Positive(message = "Amount must be greater than zero")
-    private Double amount;   // Requested subsidy amount
+    private Double amount;   
 
-    // Optional: if not provided, defaults to LocalDate.now() in service
+    
     private LocalDate date;
     
     

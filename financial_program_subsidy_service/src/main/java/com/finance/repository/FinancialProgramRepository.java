@@ -15,11 +15,11 @@ public interface FinancialProgramRepository extends JpaRepository<FinancialProgr
 	List<FinancialProgram> getProgramsByStatus(ProgramStatus status);
 
 	@Override
-	long count(); // already available from JpaRepository
+	long count(); 
 
 	long countByStatus(ProgramStatus status);
 
 	@Query("SELECT COALESCE(SUM(p.budget), 0) FROM FinancialProgram p")
-	BigDecimal sumTotalBudgetAcrossAllPrograms(); // ✅ total budget of all programs
+	BigDecimal sumTotalBudgetAcrossAllPrograms(); 
 
 }

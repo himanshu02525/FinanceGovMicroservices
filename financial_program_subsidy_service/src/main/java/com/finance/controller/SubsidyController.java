@@ -29,7 +29,7 @@ public class SubsidyController {
 
 	private final SubsidyService service;
 
-	// Financial officer creates subsidy
+	
 	@PostMapping("/save")
 	public ResponseEntity<SubsidyResponse> createSubsidy(@RequestBody SubsidyRequest request) {
 
@@ -55,7 +55,7 @@ public class SubsidyController {
 		return ResponseEntity.ok(responses);
 	}
 
-	// -------- APPROVED SUBSIDY AMOUNT --------
+	
 	@GetMapping("/approved_sum/{programId}")
 	public ResponseEntity<BigDecimal> getApprovedAmountByProgram(@PathVariable Long programId) {
 
@@ -75,7 +75,7 @@ public class SubsidyController {
 		return ResponseEntity.ok(service.updateSubsidy(requestBody, subsidyId));
 	}
 
-	// -------- SUBSIDY METRICS --------
+	
 	@GetMapping("/summary")
 	public ResponseEntity<Map<String, Object>> getSubsidySummary() {
 		return ResponseEntity.ok(service.getSubsidySummary());

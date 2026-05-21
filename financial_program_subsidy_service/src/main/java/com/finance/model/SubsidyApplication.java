@@ -19,7 +19,7 @@ public class SubsidyApplication {
     private Long applicationId;
 
     @Column(name = "entity_id", nullable = false)
-    private Long entityId;   // ✅ this is the field Spring Data will use
+    private Long entityId;   
     
     @PastOrPresent(message = "Submitted date cannot be in the future")
     private LocalDate submittedDate;

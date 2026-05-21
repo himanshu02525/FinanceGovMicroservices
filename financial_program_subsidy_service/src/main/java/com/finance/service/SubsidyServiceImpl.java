@@ -52,13 +52,13 @@ public class SubsidyServiceImpl implements SubsidyService {
 	@Override
 
 	public SubsidyResponse saveSubsidy(SubsidyRequest request) {
-		// ✅ Validate citizen externally
+		
 		Boolean isValid = citizenClient.validateCitizen(request.getEntityId());
 		if (!isValid) {
 			throw new IllegalStateException("Citizen entity is not valid.");
 		}
 
-		// ✅ Validate program internally
+		
 		FinancialProgram program = programRepository.findById(request.getProgramId())
 				.orElseThrow(() -> new IllegalArgumentException("Program not found"));
 
@@ -75,18 +75,18 @@ public class SubsidyServiceImpl implements SubsidyService {
 
 		Subsidy saved = subsidyRepository.save(subsidy);
 
-		// ✅ Fetch user details
+		
 		UserDto user = userFeignClient.getUserById(request.getUserId());
 		String emailAddr = user.getEmail();
 		Long id = user.getUserId();
 
-		// ✅ Trigger notification
+		
 		NotificationRequestDto notification = NotificationRequestDto.builder().userId(id).entityId(saved.getEntityId())
 				.category(NotificationCategory.SUBSIDY).message("Your subsidy has been granted.").build();
 
 		notificationFeignClient.sendNotification(notification, emailAddr);
 
-//	    //  Create compliance record
+
 		ComplianceCreateRequest complianceRequest = new ComplianceCreateRequest();
 		complianceRequest.setEntityId(saved.getEntityId());
 		complianceRequest.setReferenceId(saved.getSubsidyId());

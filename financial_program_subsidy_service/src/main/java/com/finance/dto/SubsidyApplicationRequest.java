@@ -10,12 +10,12 @@ import lombok.*;
 public class SubsidyApplicationRequest {
     
 	@NotNull(message = "Entity ID is required")
-    private Long entityId;   // Citizen/Business ID
+    private Long entityId;   
 
     @NotNull(message = "Program ID is required")
-    private Long programId;  // Linked program ID
+    private Long programId;  
 
-    // Automatically set to today's date if not provided
+    
     private LocalDate submittedDate = LocalDate.now();
 
     private Long userId;  

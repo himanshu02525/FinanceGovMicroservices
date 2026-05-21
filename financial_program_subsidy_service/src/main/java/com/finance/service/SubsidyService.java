@@ -10,17 +10,17 @@ import com.finance.dto.SubsidyUpdateRequest;
 
 public interface SubsidyService {
     SubsidyResponse saveSubsidy(SubsidyRequest request);
-//	SubsidyResponse saveSubsidy(SubsidyRequest request, Long userId, String email);
+
     List<SubsidyResponse> getAllSubsidies();
     List<SubsidyResponse> getSubsidiesByProgram(Long programId);
     List<SubsidyResponse> getSubsidiesByEntity(Long entityId);
-//    SubsidyResponse updateSubsidyStatus(Long subsidyId, String status);
+
     SubsidyResponse getSubsidyById(Long subsidyId);
     BigDecimal getApprovedAmountByProgram(Long programId);
     
     long getApprovedSubsidies(Long programId);
     Map<String, Object> getSubsidySummary();
-//	SubsidyResponse approveSubsidy(Long subsidyId, Long userId, String email);
+
 	
     SubsidyResponse updateSubsidy(SubsidyUpdateRequest requestBody,Long subsidyId);
 }

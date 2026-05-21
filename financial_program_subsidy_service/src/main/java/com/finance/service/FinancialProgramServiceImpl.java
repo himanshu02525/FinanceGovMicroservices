@@ -44,7 +44,7 @@ public class FinancialProgramServiceImpl implements FinancialProgramService {
 		program.setTitle(request.getTitle());
 		program.setDescription(request.getDescription());
 
-		// Default start date to today if not provided
+		
 		if (request.getStartDate() == null) {
 			program.setStartDate(LocalDate.now());
 		} else {
@@ -54,14 +54,14 @@ public class FinancialProgramServiceImpl implements FinancialProgramService {
 		program.setEndDate(request.getEndDate());
 		program.setBudget(request.getBudget());
 
-		// Default status to ACTIVE if not provided
+		
 		if (request.getStatus() == null || request.getStatus().isBlank()) {
 			program.setStatus(ProgramStatus.ACTIVE);
 		} else {
 			program.setStatus(ProgramStatus.valueOf(request.getStatus().toUpperCase()));
 		}
 
-		// Auto-close rule at creation
+		
 		if ((program.getBudget() != null && program.getBudget() <= 0)
 				|| (program.getEndDate() != null && program.getEndDate().isBefore(LocalDate.now()))) {
 			program.setStatus(ProgramStatus.CLOSED);
@@ -87,7 +87,7 @@ public class FinancialProgramServiceImpl implements FinancialProgramService {
 		existingProgram.setTitle(request.getTitle());
 		existingProgram.setDescription(request.getDescription());
 
-		// Default start date to today if not provided
+		
 		if (request.getStartDate() == null) {
 			existingProgram.setStartDate(LocalDate.now());
 		} else {
@@ -97,7 +97,7 @@ public class FinancialProgramServiceImpl implements FinancialProgramService {
 		existingProgram.setEndDate(request.getEndDate());
 		existingProgram.setBudget(request.getBudget());
 
-		// Default status to ACTIVE if not provided
+		
 		if (request.getStatus() == null || request.getStatus().isBlank()) {
 			existingProgram.setStatus(ProgramStatus.ACTIVE);
 		} else {
@@ -200,7 +200,7 @@ public class FinancialProgramServiceImpl implements FinancialProgramService {
  
 		Map<String, Object> response = new HashMap<>();
  
-		// ✅ Subsidy Status Counts
+		
 		Map<String, Long> subsidyStatusCounts = new HashMap<>();
 		for (SubsidyStatus status : SubsidyStatus.values()) {
 			long count = subsidyRepository.countByProgramProgramIdAndStatus(programId, status);
@@ -208,7 +208,7 @@ public class FinancialProgramServiceImpl implements FinancialProgramService {
 			subsidyStatusCounts.put(status.name(), count);
 		}
  
-		// ✅ Application Status Counts
+		
 		Map<String, Long> applicationStatusCounts = new HashMap<>();
 		long totalApplications = 0;
  
@@ -222,25 +222,25 @@ public class FinancialProgramServiceImpl implements FinancialProgramService {
 		// ✅ Approved Applications
 		long approvedApplications = applicationStatusCounts.getOrDefault(ApplicationStatus.APPROVED.name(), 0L);
  
-		// ✅ Budget Utilization %
+		
 		BigDecimal utilizationPercent = budget.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ZERO
 				: approvedAmount.divide(budget, 2, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
  
-		// ✅ Remaining Budget %
+		
 		BigDecimal remainingPercent = budget.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ZERO
 				: remainingAmount.divide(budget, 2, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
  
-		// ✅ Approval Rate %
+		
 		BigDecimal approvalRate = totalApplications == 0 ? BigDecimal.ZERO
 				: BigDecimal.valueOf(approvedApplications)
 						.divide(BigDecimal.valueOf(totalApplications), 2, RoundingMode.HALF_UP)
 						.multiply(BigDecimal.valueOf(100));
  
-		// ✅ Average Subsidy Amount
+		
 		BigDecimal avgSubsidyAmount = approvedApplications == 0 ? BigDecimal.ZERO
 				: approvedAmount.divide(BigDecimal.valueOf(approvedApplications), 2, RoundingMode.HALF_UP);
  
-		// ✅ Final Response
+		
 		response.put("programDetails", programDetails);
  
 		response.put("budget", budget);

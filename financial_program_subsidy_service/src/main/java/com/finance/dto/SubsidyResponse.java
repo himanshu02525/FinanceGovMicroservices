@@ -12,11 +12,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SubsidyResponse {
-    private Long subsidyId;     // Auto-generated ID
-    private Long entityId;      // Citizen/Business ID
-    private Double amount;      // Subsidy amount
-    private LocalDate date;     // Date of subsidy
+    private Long subsidyId;     
+    private Long entityId;      
+    private Double amount;      
+    private LocalDate date;     
     private String status;      
-    private Long programId;     // Linked program ID
+    private Long programId;     
 }
 

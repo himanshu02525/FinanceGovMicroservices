@@ -10,9 +10,9 @@ import java.time.LocalDate;
 
 import lombok.AllArgsConstructor;
 
-@Data                     // Generates getters, setters, toString, equals, hashCode
-@NoArgsConstructor        // Generates a no-args constructor
-@AllArgsConstructor       // Generates an all-args constructor
+@Data                     
+@NoArgsConstructor        
+@AllArgsConstructor       
 public class FinancialProgramResponse {
 
     private Long programId;

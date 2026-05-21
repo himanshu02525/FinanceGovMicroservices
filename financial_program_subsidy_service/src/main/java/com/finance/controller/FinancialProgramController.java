@@ -76,7 +76,7 @@ public class FinancialProgramController {
 		return ResponseEntity.ok(responses);
 	}
 
-	// -------- PROGRAM METRICS --------
+	
 	@GetMapping("/summary")
 	public ResponseEntity<Map<String, Object>> getProgramSummary(
 			@RequestParam(value = "id", required = false) Long id) {

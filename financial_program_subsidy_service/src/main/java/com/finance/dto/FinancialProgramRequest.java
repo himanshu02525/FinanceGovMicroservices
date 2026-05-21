@@ -22,7 +22,7 @@ public class FinancialProgramRequest {
     @NotBlank(message = "Description cannot be blank")
     private String description;
 
-    // Optional: if not provided, service will default to LocalDate.now()
+    
     private LocalDate startDate;
 
     @NotNull(message = "End date is required")
@@ -33,7 +33,7 @@ public class FinancialProgramRequest {
     @Positive(message = "Budget must be a positive value")
     private Double budget;
 
-    // Optional: if not provided, service will default to ACTIVE
+    
     private String status;
 }
 

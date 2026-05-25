@@ -24,7 +24,7 @@ public class ResourceServiceImpl implements ResourceService {
 
 	private final ResourceRepository resourceRepository;
 
-	// ✅ NEW – Feign client instead of FinancialProgramRepository
+	// Feign client instead of FinancialProgramRepository
 	private final FinancialProgramClient financialProgramClient;
 
 	private ResourceStatus mapStatus(String status) {
@@ -38,7 +38,7 @@ public class ResourceServiceImpl implements ResourceService {
 	@Override
 	public ResourceResponseDTO createResource(ResourceRequestDTO dto) {
 
-		FinancialProgramResponseDTO program; // ✅ declare first
+		FinancialProgramResponseDTO program; 
 
 		try {
 			program = financialProgramClient.getProgramById(dto.getProgramId());
@@ -47,7 +47,6 @@ public class ResourceServiceImpl implements ResourceService {
 		}
 
 		
-		// ✅ Now program is accessible
 		if (!"ACTIVE".equalsIgnoreCase(program.getStatus())) {
 			throw new IllegalStateException("Resources can be allocated only when the program status is ACTIVE");
 		}

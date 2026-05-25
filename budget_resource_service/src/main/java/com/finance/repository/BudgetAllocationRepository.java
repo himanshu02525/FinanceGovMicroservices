@@ -11,10 +11,10 @@ import com.finance.model.BudgetAllocation;
 
 public interface BudgetAllocationRepository extends JpaRepository<BudgetAllocation, Long> {
 
-    // ✅ CHANGED: use programId column instead of JPA relationship
+    // use programId column instead of JPA relationship
     List<BudgetAllocation> findByProgramId(Long programId);
 
-    // ✅ CHANGED: query updated for microservice-safe design
+    // query for microservice-safe design
     @Query("""
             SELECT COALESCE(SUM(b.amount), 0)
             FROM BudgetAllocation b

@@ -33,7 +33,6 @@ public class Resource {
     @Column(name = "ResourceID")
     private Long resourceId;
 
-    // ✅ CHANGED: replaced FinancialProgram relationship with programId
     @NotNull(message = "Program is required")
     @Column(name = "ProgramID", nullable = false)
     private Long programId;

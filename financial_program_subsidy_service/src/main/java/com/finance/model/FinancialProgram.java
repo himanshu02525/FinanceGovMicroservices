@@ -10,8 +10,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -36,6 +36,7 @@ public class FinancialProgram {
     @NotBlank(message = "Title cannot be blank")
     private String title;
 
+    @Lob
     @NotBlank(message = "Description cannot be blank")
     private String description;
 
@@ -44,15 +45,13 @@ public class FinancialProgram {
     private Double budget;
 
     @NotNull(message = "Start date is required")
-    @FutureOrPresent(message = "Start date cannot be in the past")
     private LocalDate startDate;
 
     @NotNull(message = "End date is required")
-    @Future(message = "End date must be in the future")
+    @FutureOrPresent(message = "End date must be in the future")
     private LocalDate endDate;
 
     @Enumerated(EnumType.STRING)
     @NotNull(message = "Program status is required")
     private ProgramStatus status;
 }
-

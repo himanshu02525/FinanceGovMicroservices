@@ -57,7 +57,7 @@ public class BudgetAllocation {
     @Column(name = "Status", nullable = false)
     private AllocationStatus status;
 
-    // ✅ NEW: Automatically set today's date if not provided
+    // Automatically set today's date if not provided
     @PrePersist
     private void setDefaultDate() {
         if (this.date == null) {

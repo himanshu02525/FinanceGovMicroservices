@@ -77,46 +77,54 @@ public class FinancialProgramServiceImpl implements FinancialProgramService {
 	@Override
 	@Transactional
 	public FinancialProgramResponse updateProgram(Long id, FinancialProgramRequest request) {
-		log.info("Updating financial program ID: {} with data: {}", id, request);
+	    log.info("Updating financial program ID: {} with data: {}", id, request);
 
-		FinancialProgram existingProgram = repository.findById(id).orElseThrow(() -> {
-			log.error("Financial program not found with ID: {}", id);
-			return new ProgramNotFoundException(id);
-		});
+	    FinancialProgram existingProgram = repository.findById(id).orElseThrow(() -> {
+	        log.error("Financial program not found with ID: {}", id);
+	        return new ProgramNotFoundException(id);
+	    });
 
-		existingProgram.setTitle(request.getTitle());
-		existingProgram.setDescription(request.getDescription());
+	    // Update only if value exists
+	    if (request.getTitle() != null && !request.getTitle().isBlank()) {
+	        existingProgram.setTitle(request.getTitle());
+	    }
 
-		
-		if (request.getStartDate() == null) {
-			existingProgram.setStartDate(LocalDate.now());
-		} else {
-			existingProgram.setStartDate(request.getStartDate());
-		}
+	    if (request.getDescription() != null && !request.getDescription().isBlank()) {
+	        existingProgram.setDescription(request.getDescription());
+	    }
 
-		existingProgram.setEndDate(request.getEndDate());
-		existingProgram.setBudget(request.getBudget());
+	    // ✅ VERY IMPORTANT: Don't override startDate unnecessarily
+	    if (request.getStartDate() != null) {
+	        existingProgram.setStartDate(request.getStartDate());
+	    }
 
-		
-		if (request.getStatus() == null || request.getStatus().isBlank()) {
-			existingProgram.setStatus(ProgramStatus.ACTIVE);
-		} else {
-			existingProgram.setStatus(ProgramStatus.valueOf(request.getStatus().toUpperCase()));
-		}
+	    if (request.getEndDate() != null) {
+	        existingProgram.setEndDate(request.getEndDate());
+	    }
 
-		// Auto-close rule at update
-		if ((existingProgram.getBudget() != null && existingProgram.getBudget() <= 0)
-				|| (existingProgram.getEndDate() != null && existingProgram.getEndDate().isBefore(LocalDate.now()))) {
-			existingProgram.setStatus(ProgramStatus.CLOSED);
-			log.warn("Program ID {} auto-closed due to budget exhausted or end date passed", id);
-		}
+	    if (request.getBudget() != null) {
+	        existingProgram.setBudget(request.getBudget());
+	    }
 
-		FinancialProgram updatedProgram = repository.save(existingProgram);
-		log.info("Financial program updated successfully with ID: {}", id);
+	    if (request.getStatus() != null && !request.getStatus().isBlank()) {
+	        existingProgram.setStatus(
+	                ProgramStatus.valueOf(request.getStatus().toUpperCase())
+	        );
+	    }
 
-		return toResponse(updatedProgram);
+	    if ((existingProgram.getBudget() != null && existingProgram.getBudget() <= 0)
+	            || (existingProgram.getEndDate() != null && existingProgram.getEndDate().isBefore(LocalDate.now()))) {
+	        existingProgram.setStatus(ProgramStatus.CLOSED);
+	        log.warn("Program ID {} auto-closed due to budget exhausted or end date passed", id);
+	    }
+
+	    FinancialProgram updatedProgram = repository.save(existingProgram);
+	    log.info("Financial program updated successfully with ID: {}", id);
+
+	    return toResponse(updatedProgram);
 	}
-
+	
+	
 	@Override
 	public String deleteProgram(Long id) {
 		log.info("Deleting financial program with ID: {}", id);

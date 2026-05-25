@@ -31,7 +31,7 @@ public class BudgetAllocationServiceImpl implements BudgetAllocationService {
 
 	private final BudgetAllocationRepository budgetAllocationRepository;
 
-	// ✅ NEW – Feign Clients instead of repositories
+	// Feign Clients instead of repositories
 	private final FinancialProgramClient financialProgramClient;
 
 	private AllocationStatus mapStatus(String status) {
@@ -48,13 +48,13 @@ public class BudgetAllocationServiceImpl implements BudgetAllocationService {
 
 		logger.info("Creating budget allocation for Program ID: {}", dto.getProgramId());
 
-		// ✅ MICROservice-safe: Validate Program via Feign
+		// Validate Program via Feign
 		FinancialProgramResponseDTO program;
 
 		try {
 			program = financialProgramClient.getProgramById(dto.getProgramId());
 		} catch (FeignException ex) {
-			// ✅ ALWAYS throw domain exception
+			// ALWAYS throw domain exception
 			throw new ProgramNotFound("Program not found with ID: " + dto.getProgramId());
 		}
 
@@ -111,10 +111,10 @@ public class BudgetAllocationServiceImpl implements BudgetAllocationService {
 		FinancialProgramResponseDTO program;
 
 		try {
-			// ✅ MICROservice-safe: check Program exists via Feign
+			//  check Program exists via Feign
 			program = financialProgramClient.getProgramById(programId);
 		} catch (RuntimeException ex) {
-			// ✅ Translate remote failure into domain exception
+			//  Translate remote failure into domain exception
 			throw new ProgramNotFound("Program not found with id: " + programId);
 		}
 
@@ -124,7 +124,7 @@ public class BudgetAllocationServiceImpl implements BudgetAllocationService {
 
 		BigDecimal remainingBase = baseBudget.subtract(totalAllocated);
 
-		// ✅ MICROservice-safe: used amount via Feign
+		// used amount via Feign
 		BigDecimal totalUsed;
 		try {
 			totalUsed = financialProgramClient.getApprovedAmount(programId);

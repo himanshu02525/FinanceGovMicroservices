@@ -9,7 +9,7 @@ import com.finance.model.Resource;
 
 public interface ResourceRepository extends JpaRepository<Resource, Long> {
 
-    // ✅ CHANGED: microservice-safe (no JPA relationship)
+    // microservice-safe (no JPA relationship)
     List<Resource> findByProgramId(Long programId);
 
     List<Resource> findByStatus(ResourceStatus status);
